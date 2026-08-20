@@ -1,0 +1,16 @@
+/.quarto/
+/_site/
+/.claude/
+**/*_files/
+/examples/.quarto/
+/examples/_site/
+/node_modules/
+/output/
+/tmp/
+/.pdf-cache.json
+*.pyc
+__pycache__/
+.DS_Store
+
+
+**/*.quarto_ipynb

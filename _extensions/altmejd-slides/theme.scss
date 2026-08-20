@@ -1,0 +1,545 @@
+/*-- scss:defaults --*/
+
+// Compile-time fallbacks. Routine author customization uses the CSS variables
+// emitted below and YAML overrides injected by the Lua filter.
+$body-bg: #f8fafc !default;
+$body-color: #0f172a !default;
+$primary: #644043 !default;
+$link-color: $primary !default;
+$selection-bg: rgba(146, 79, 91, 0.28) !default;
+
+$font-family-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif !default;
+$font-family-monospace: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace !default;
+$presentation-heading-font: $font-family-sans-serif !default;
+$presentation-font-size-root: 30px !default;
+$presentation-heading-color: $body-color !default;
+$presentation-heading-font-weight: 650 !default;
+$presentation-heading-text-transform: none !default;
+$presentation-slide-text-align: left !default;
+$presentation-title-slide-text-align: left !default;
+
+// Public extension tokens. A consumer SCSS layer can override any of these.
+$altmejd-primary: $primary !default;
+$altmejd-secondary: #ffeac2 !default;
+$altmejd-accent: #e26d5c !default;
+$altmejd-info: #924f5b !default;
+$altmejd-success: #c9cba3 !default;
+$altmejd-surface: #f1f5f9 !default;
+$altmejd-border: #e2e8f0 !default;
+$altmejd-muted: #64748b !default;
+$altmejd-code-bg: mix($altmejd-success, $body-bg, 24%) !default;
+$altmejd-output-bg: mix($altmejd-border, $body-bg, 72%) !default;
+$altmejd-code-max-height: 480px !default;
+$altmejd-heading-line-start: $altmejd-primary !default;
+$altmejd-heading-line-end: $altmejd-secondary !default;
+$altmejd-agenda-bg: $altmejd-primary !default;
+$altmejd-agenda-color: $altmejd-secondary !default;
+$altmejd-radius: 5px !default;
+$altmejd-gap: 0.45rem !default;
+$altmejd-aside-max-height: 26% !default;
+$altmejd-handout-note-max-height: 32% !default;
+
+$code-block-bg: $altmejd-code-bg !default;
+$code-block-border-color: $altmejd-border !default;
+$code-color: $body-color !default;
+$code-bg: $altmejd-code-bg !default;
+
+/*-- scss:rules --*/
+
+:root {
+  --altmejd-background: #{$body-bg};
+  --altmejd-foreground: #{$body-color};
+  --altmejd-primary: #{$altmejd-primary};
+  --altmejd-secondary: #{$altmejd-secondary};
+  --altmejd-accent: #{$altmejd-accent};
+  --altmejd-info: #{$altmejd-info};
+  --altmejd-success: #{$altmejd-success};
+  --altmejd-surface: #{$altmejd-surface};
+  --altmejd-border: #{$altmejd-border};
+  --altmejd-muted: #{$altmejd-muted};
+  --altmejd-code-background: color-mix(
+    in srgb,
+    var(--altmejd-success) 24%,
+    var(--altmejd-background)
+  );
+  --altmejd-output-background: color-mix(
+    in srgb,
+    var(--altmejd-border) 72%,
+    var(--altmejd-background)
+  );
+  --altmejd-heading-line-start: var(--altmejd-primary);
+  --altmejd-heading-line-end: var(--altmejd-secondary);
+  --altmejd-agenda-background: var(--altmejd-primary);
+  --altmejd-agenda-foreground: var(--altmejd-secondary);
+}
+
+.reveal-viewport {
+  color: var(--altmejd-foreground);
+  background: var(--altmejd-background);
+}
+
+.reveal {
+  color: var(--altmejd-foreground);
+}
+
+.reveal .slides {
+  text-align: left;
+}
+
+.reveal .slide {
+  line-height: 1.35;
+}
+
+.reveal .slide h1,
+.reveal .slide h2 {
+  color: var(--altmejd-foreground);
+  letter-spacing: -0.015em;
+}
+
+.reveal .slide h1 {
+  font-size: 1.65em;
+  font-weight: 700;
+}
+
+.reveal .slide h2 {
+  position: relative;
+  margin-bottom: 0.8em;
+  padding-bottom: 0.28em;
+  font-size: 1.28em;
+}
+
+.reveal .slide h2::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--altmejd-heading-line-start),
+    var(--altmejd-heading-line-end)
+  );
+}
+
+.reveal .slide h3 {
+  color: var(--altmejd-primary);
+  font-size: 0.84em;
+  font-weight: 650;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.reveal .slide strong {
+  color: var(--altmejd-accent);
+  font-weight: 650;
+}
+
+.reveal .slide a {
+  color: var(--altmejd-primary);
+  text-decoration-thickness: 0.075em;
+  text-underline-offset: 0.14em;
+}
+
+.reveal .slide li {
+  margin-bottom: 0.18em;
+}
+
+.reveal .slide li::marker {
+  color: var(--altmejd-info);
+}
+
+.reveal .slide blockquote {
+  width: auto;
+  margin-inline: 0;
+  padding: 0.45em 0.65em;
+  color: var(--altmejd-foreground);
+  background: color-mix(in srgb, var(--altmejd-surface) 72%, transparent);
+  border-left: 4px solid var(--altmejd-primary);
+  border-radius: 0 $altmejd-radius $altmejd-radius 0;
+  box-shadow: none;
+}
+
+.reveal .slide code {
+  font-family: $font-family-monospace;
+  font-variant-ligatures: none;
+}
+
+.reveal .slide :not(pre) > code {
+  padding: 0.04em 0.22em;
+  color: inherit;
+  background: var(--altmejd-code-background);
+  border-radius: 3px;
+}
+
+.reveal .slide pre {
+  max-height: $altmejd-code-max-height;
+  background: var(--altmejd-code-background);
+  border: 1px solid var(--altmejd-border);
+  border-left: 3px solid color-mix(
+    in srgb,
+    var(--altmejd-info) 50%,
+    var(--altmejd-border)
+  );
+  border-radius: $altmejd-radius;
+  box-shadow: none;
+  overflow: auto;
+}
+
+.reveal .slide pre.is-overflowing {
+  border-bottom: 2px dashed var(--altmejd-muted);
+}
+
+.reveal .slide .cell-output pre,
+.reveal .slide pre.text {
+  background: var(--altmejd-output-background);
+  border-left-color: color-mix(
+    in srgb,
+    var(--altmejd-info) 38%,
+    var(--altmejd-border)
+  );
+}
+
+.reveal .slide table {
+  font-size: 0.82em;
+}
+
+.reveal .slide table th,
+.reveal .slide table td {
+  padding: 0.16em 0.32em;
+  border-color: var(--altmejd-border);
+}
+
+.reveal .slide table th {
+  border-bottom: 2px solid color-mix(
+    in srgb,
+    var(--altmejd-primary) 35%,
+    var(--altmejd-background)
+  );
+}
+
+.reveal .slide img,
+.reveal .slide video,
+.reveal .slide iframe {
+  border-radius: 3px;
+}
+
+.reveal .progress {
+  height: 3px;
+  background: color-mix(in srgb, var(--altmejd-border) 35%, transparent);
+}
+
+.reveal .progress span {
+  background: var(--altmejd-primary);
+}
+
+.reveal .slide-number {
+  color: var(--altmejd-muted);
+  font-family: $font-family-monospace;
+  font-size: 0.42em;
+}
+
+.reveal .footer {
+  color: color-mix(
+    in srgb,
+    var(--altmejd-muted) 70%,
+    var(--altmejd-background)
+  );
+  font-size: 0.34em;
+  text-align: left;
+}
+
+// Quarto-native title fields remain intact and can be populated from ordinary
+// title, subtitle, author, institute, and date metadata.
+#title-slide {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  text-align: left;
+}
+
+#title-slide::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--altmejd-heading-line-start),
+    var(--altmejd-heading-line-end)
+  );
+}
+
+#title-slide .title {
+  margin-bottom: 0.12em;
+  font-size: 1.9em;
+  font-weight: 720;
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+}
+
+#title-slide .subtitle {
+  margin-bottom: 1.1em;
+  color: var(--altmejd-primary);
+  font-size: 0.88em;
+  font-weight: 620;
+}
+
+#title-slide .quarto-title-author-name {
+  font-weight: 620;
+}
+
+#title-slide .institute,
+#title-slide .date,
+#title-slide .quarto-title-authors {
+  color: var(--altmejd-muted);
+  font-size: 0.7em;
+}
+
+// Use {.dark-bg} only when the author has chosen a genuinely dark background.
+.reveal .slides section.dark-bg,
+.reveal .slides section.dark-bg h1,
+.reveal .slides section.dark-bg h2,
+.reveal .slides section.dark-bg h3,
+.reveal .slides section.dark-bg a {
+  color: #fff;
+}
+
+// Section agendas are generated by default and can be configured in YAML.
+.reveal .slides section.agenda-slide {
+  color: var(--altmejd-agenda-foreground);
+  background: var(--altmejd-agenda-background);
+}
+
+.reveal:not(.overview) .slides section.agenda-slide {
+  box-shadow: 0 0 0 100vmax var(--altmejd-agenda-background);
+}
+
+.reveal .slides section.agenda-slide > h1 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.reveal .agenda-heading {
+  margin-bottom: 0.65em;
+  color: var(--altmejd-agenda-foreground);
+  font-size: 1.25em;
+  font-weight: 650;
+}
+
+.reveal .agenda ul,
+.reveal .agenda ol {
+  padding-left: 1.2em;
+}
+
+.reveal .agenda a {
+  color: inherit;
+}
+
+.reveal .agenda-inactive {
+  opacity: 0.68;
+}
+
+.reveal .agenda-active {
+  color: #fff;
+  font-weight: 700;
+  opacity: 1;
+}
+
+// A top-level attribution remains part of its slide, so Reveal plugins such as
+// slide-remote continue to see the conventional `.reveal > .slides` tree.
+.reveal .slide > .attribution {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  margin: 0;
+  color: var(--altmejd-muted);
+  font-size: 0.46em;
+  line-height: 1;
+  text-align: center;
+  transform: translateY(-50%) rotate(180deg);
+  transform-origin: center;
+  writing-mode: vertical-lr;
+}
+
+.reveal .slide > .attribution p {
+  margin: 0;
+}
+
+.reveal .slide > .attribution a {
+  color: inherit;
+  text-decoration: none;
+}
+
+// Visible asides use the same bottom-box contract in presentations and
+// handouts. Speaker notes remain hidden until handout mode is requested.
+.reveal .slide > .aside,
+.reveal .slide > aside:not(.notes) {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  box-sizing: border-box;
+  max-height: $altmejd-aside-max-height;
+  padding: 0.5em 0.65em;
+  overflow: hidden;
+  color: var(--altmejd-muted);
+  font-size: 0.5em;
+  line-height: 1.28;
+  background: var(--altmejd-output-background);
+  border: 1px solid var(--altmejd-border);
+  border-left: 3px solid color-mix(
+    in srgb,
+    var(--altmejd-info) 38%,
+    var(--altmejd-border)
+  );
+  border-radius: $altmejd-radius;
+}
+
+.reveal .slide > :is(.aside, aside:not(.notes)).is-overflowing {
+  border-bottom: 2px dashed var(--altmejd-muted);
+}
+
+.reveal .slide > :is(.aside, aside:not(.notes)) > :first-child {
+  margin-top: 0;
+}
+
+.reveal .slide > :is(.aside, aside:not(.notes)) > :last-child {
+  margin-bottom: 0;
+}
+
+// Small, opt-in layout API. These classes never change the global Reveal
+// section display mode.
+.reveal .slide.layout-fill {
+  display: flex !important;
+  flex-direction: column;
+  height: 100%;
+}
+
+.reveal .slide.layout-fill > h2 {
+  flex: 0 0 auto;
+}
+
+.reveal .slide.layout-fill > .fill-region {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.reveal .slide .layout-two-column {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $altmejd-gap;
+  min-height: 0;
+}
+
+.reveal .slide .layout-two-column.layout-30-70 {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 7fr);
+}
+
+.reveal .slide .layout-two-column.layout-70-30 {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+}
+
+.reveal .slide .scroll-y {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.reveal .slide .fit-media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+.reveal .slide .fit-media > :is(img, video, iframe, svg) {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+// `?handout=true` exposes speaker notes and reserves their measured height.
+html.altmejd-handout .reveal .slide.has-handout-notes:not(.has-handout-aside) {
+  box-sizing: border-box;
+  padding-bottom: calc(var(--altmejd-handout-note-height, 0px) + #{$altmejd-gap});
+}
+
+html.altmejd-handout .reveal .slide.has-handout-aside:not(.has-handout-notes) {
+  box-sizing: border-box;
+  padding-bottom: calc(var(--altmejd-handout-aside-height, 0px) + #{$altmejd-gap});
+}
+
+html.altmejd-handout .reveal .slide.has-handout-notes.has-handout-aside {
+  box-sizing: border-box;
+  padding-bottom: calc(
+    var(--altmejd-handout-note-height, 0px) +
+    var(--altmejd-handout-aside-height, 0px) +
+    #{$altmejd-gap * 2}
+  );
+}
+
+html.altmejd-handout .reveal .slide.has-handout-notes > .aside,
+html.altmejd-handout .reveal .slide.has-handout-notes > aside:not(.notes) {
+  bottom: calc(var(--altmejd-handout-note-height, 0px) + #{$altmejd-gap});
+}
+
+html.altmejd-handout .reveal .slide > aside.notes {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: block !important;
+  box-sizing: border-box;
+  max-height: $altmejd-handout-note-max-height;
+  padding: 0.5em 0.65em;
+  overflow: hidden;
+  color: var(--altmejd-muted);
+  font-size: 0.5em;
+  line-height: 1.28;
+  background: var(--altmejd-output-background);
+  border: 1px solid var(--altmejd-border);
+  border-left: 3px solid var(--altmejd-primary);
+  border-radius: $altmejd-radius;
+}
+
+html.altmejd-handout .reveal .slide > aside.notes.is-overflowing {
+  border-bottom: 2px dashed var(--altmejd-muted);
+}
+
+html.altmejd-handout .reveal .slide > aside.notes > :first-child {
+  margin-top: 0;
+}
+
+html.altmejd-handout .reveal .slide > aside.notes > :last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 700px) {
+  .reveal .slide .layout-two-column,
+  .reveal .slide .layout-two-column.layout-30-70,
+  .reveal .slide .layout-two-column.layout-70-30 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal *,
+  .reveal *::before,
+  .reveal *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,84 @@
+---
+title: "Regression Fixture"
+author: "Theme CI"
+format:
+  altmejd-slides-revealjs:
+    transition: none
+    width: 1600
+    height: 900
+altmejd-slides:
+  colors:
+    primary: "#0057b8"
+    secondary: "#f4d35e"
+---
+
+## Notes and aside
+
+Visible content must not overlap either bottom box.
+
+::: {.aside}
+A visible aside.
+:::
+
+::: notes
+A speaker note rendered only in handout mode.
+:::
+
+# Configured section
+
+## Near-cap code block
+
+This 15-line block must fit in presentation mode without scrolling.
+
+```r
+library(dichromat)
+library(paletteer)
+colorblind_palette <- function(palette) {
+  melt(as.data.table(
+    append(
+      list(x = seq_along(palette), Original = palette),
+      lapply(c(Protanopia = "protan", Deuteranopia = "deutan"),
+        dichromat, colours = palette)
+    ),
+    id.vars = "x"
+  )) |>
+    ggplot(aes(x = x, y = 0, fill = value)) +
+    geom_raster() + facet_wrap(vars(variable), nrow = 4)
+}
+```
+
+## Long code
+
+```python
+def summarize(values):
+    count = len(values)
+    total = sum(values)
+    mean = total / count
+    centered = [value - mean for value in values]
+    squares = [value * value for value in centered]
+    variance = sum(squares) / (count - 1)
+    standard_deviation = variance ** 0.5
+    minimum = min(values)
+    maximum = max(values)
+    span = maximum - minimum
+    return {
+        "count": count,
+        "mean": mean,
+        "standard_deviation": standard_deviation,
+        "minimum": minimum,
+        "maximum": maximum,
+        "span": span,
+    }
+```
+
+::: notes
+The PDF renderer should expose a visible overflow cue or fail its overflow check rather than silently clipping code.
+:::
+
+## Fragments
+
+::: {.incremental}
+- First
+- Second
+- Third
+:::

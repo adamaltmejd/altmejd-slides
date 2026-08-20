@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" role="img" aria-labelledby="title desc">
+  <title id="title">Coefficient estimate</title>
+  <desc id="desc">A point estimate at 0.18 and a confidence interval from 0.07 to 0.29.</desc>
+  <rect width="800" height="420" fill="#f8fafc"/>
+  <line x1="110" y1="300" x2="720" y2="300" stroke="#64748b" stroke-width="3"/>
+  <line x1="415" y1="90" x2="415" y2="320" stroke="#cbd5e1" stroke-width="3" stroke-dasharray="9 9"/>
+  <line x1="329" y1="205" x2="501" y2="205" stroke="#644043" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="415" cy="205" r="18" fill="#e26d5c" stroke="#0f172a" stroke-width="4"/>
+  <text x="110" y="350" fill="#0f172a" font-family="system-ui, sans-serif" font-size="28">−0.2</text>
+  <text x="400" y="350" fill="#0f172a" font-family="system-ui, sans-serif" font-size="28">0</text>
+  <text x="685" y="350" fill="#0f172a" font-family="system-ui, sans-serif" font-size="28">0.4</text>
+  <text x="415" y="155" text-anchor="middle" fill="#0f172a" font-family="system-ui, sans-serif" font-size="30">Estimate</text>
+</svg>

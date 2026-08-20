@@ -1,0 +1,112 @@
+---
+title: "Altmejd Slides"
+subtitle: "A visual and behavioral showcase"
+author:
+  - name: Adam Altmejd Selder
+    affiliations:
+      - name: Stockholm University
+date: 2026-08-20
+format:
+  altmejd-slides-revealjs:
+    footer: "Adam Altmejd Selder · {{< meta date >}}"
+    transition: none
+    width: 1600
+    height: 900
+slide-remote:
+  worker-url: https://slide-remote.adamaltmejd.workers.dev
+  show-button: false
+  disable-on-params: [pdf, handout]
+---
+
+## The question
+
+How should a result travel from analysis to a talk?
+
+- Preserve the argument.
+- Make uncertainty visible.
+- Keep the source reproducible.
+
+::: notes
+This standard Reveal note stays hidden while presenting, is available to
+speaker view and Slide Remote, and appears in the handout PDF.
+:::
+
+# Evidence
+
+## A result with context
+
+::: {.columns}
+::: {.column width="56%"}
+![A deterministic SVG fixture](assets/estimate.svg){fig-alt="A coefficient estimate with a confidence interval"}
+:::
+
+::: {.column width="44%"}
+- Point estimate: **0.18**
+- 95% interval: **0.07–0.29**
+- Pre-specified outcome
+:::
+:::
+
+::: {.aside}
+Illustrative values used to exercise layout; they are not empirical claims.
+:::
+
+::: notes
+The handout stacks this speaker note and the visible aside without overlap.
+:::
+
+## Fragments collapse in PDFs
+
+::: {.incremental}
+1. Define the estimand.
+2. Show the identifying variation.
+3. Report uncertainty.
+:::
+
+::: notes
+Both PDF variants contain the final state once, not one page per fragment.
+:::
+
+## Staged code highlighting
+
+```{.r code-line-numbers="1|2-3|4"}
+model <- lm(outcome ~ treatment, data = sample)
+estimate <- coef(model)[["treatment"]]
+interval <- confint(model)["treatment", ]
+c(estimate = estimate, lower = interval[1], upper = interval[2])
+```
+
+::: notes
+Handout mode does not leave unselected code lines dimmed.
+:::
+
+## Tables remain readable
+
+| Specification | Estimate | Standard error |
+|:--------------|---------:|---------------:|
+| Baseline      | 0.18     | 0.06           |
+| Controls      | 0.17     | 0.06           |
+| Fixed effects | 0.15     | 0.07           |
+
+## Explicit dark background {.dark-bg background-color="#1e293b"}
+
+Text color is opt-in for dark backgrounds.
+
+- Links remain [distinguishable](https://quarto.org/).
+- Emphasis does not depend on color alone.
+
+## Light custom background {.light-bg background-color="#ffeac2"}
+
+Light backgrounds never inherit white text merely because a background color exists.
+
+# Conclusion
+
+## What the format promises
+
+- Markdown and computation remain Quarto-native.
+- Presentation and handout artifacts come from the same rendered deck.
+- The default design is opinionated; the YAML remains easy to edit.
+
+::: {.attribution}
+`altmejd-slides` showcase
+:::

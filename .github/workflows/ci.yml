@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  QUARTO_VERSION: "1.10.18"
+  BUN_VERSION: "1.3.14"
+  RUFF_VERSION: "0.14.5"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install locked JavaScript tools
+        run: bun install --frozen-lockfile
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          version: "0.12.5"
+          enable-cache: true
+
+      - name: Check source and unit tests
+        run: |
+          bun run check
+          uvx "ruff==${RUFF_VERSION}" check tools
+          uvx "ruff==${RUFF_VERSION}" format --check tools
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: ${{ env.QUARTO_VERSION }}
+
+      - name: Render fixtures
+        run: quarto render
+
+      - name: Check near-cap code remains visible
+        run: |
+          chrome_path="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$chrome_path"
+          CHROME_PATH="$chrome_path" bun run test:browser
+
+      - name: Render PDF regression pair
+        run: |
+          chrome_path="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$chrome_path"
+          python3 tools/render_revealjs_pdfs.py \
+            --site-dir _site \
+            --glob 'tests/fixtures/regression.html' \
+            --output-dir output/pdf \
+            --chrome-path "$chrome_path"
+
+      - name: Upload PDF regression artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: reveal-pdf-regression
+          path: output/pdf/tests/fixtures/*.pdf
+          if-no-files-found: error

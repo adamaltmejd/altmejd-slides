@@ -1,0 +1,17 @@
+.github
+docs
+examples
+node_modules
+output
+tests
+tmp
+tools
+_site
+_quarto.yml
+.editorconfig
+biome.json
+bun.lock
+LICENSE
+package.json
+pyproject.toml
+README.md

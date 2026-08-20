@@ -1,0 +1,17 @@
+---
+title: "No Agenda Fixture"
+format:
+  altmejd-slides-revealjs:
+    transition: none
+    width: 1600
+    height: 900
+altmejd-slides:
+  agenda:
+    enabled: false
+---
+
+# Section without an agenda
+
+## Content
+
+The explicit deck-level opt-out suppresses automatic section agendas.

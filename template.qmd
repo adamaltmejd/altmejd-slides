@@ -1,0 +1,63 @@
+---
+title: "Talk title"
+subtitle: "A clear statement of the argument"
+author:
+  - name: Adam Altmejd Selder
+    affiliations:
+      - name: Stockholm University
+date: today
+format:
+  altmejd-slides-revealjs:
+    footer: "Adam Altmejd Selder · {{< meta date >}}"
+    transition: none
+    width: 1600
+    height: 900
+
+# These are the built-in defaults, written out so a new deck has one obvious
+# place to edit its palette and section agendas.
+altmejd-slides:
+  colors:
+    background: "#f8fafc"
+    foreground: "#0f172a"
+    primary: "#644043"
+    secondary: "#ffeac2"
+    accent: "#e26d5c"
+    info: "#924f5b"
+    success: "#c9cba3"
+    surface: "#f1f5f9"
+    border: "#e2e8f0"
+    muted: "#64748b"
+  agenda:
+    enabled: true
+    heading: Outline
+    bullets: bullet
+    clickable: false
+
+slide-remote:
+  worker-url: https://slide-remote.adamaltmejd.workers.dev
+  show-button: false
+  disable-on-params: [pdf, handout]
+---
+
+## Opening question
+
+What should the audience understand when the talk is over?
+
+::: notes
+Speaker notes remain available to Reveal speaker view, Slide Remote, and the
+handout PDF.
+:::
+
+# Evidence
+
+## Main result
+
+- State the estimand.
+- Show the identifying variation.
+- Make uncertainty visible.
+
+# Conclusion
+
+## Takeaway
+
+Return to the opening question and answer it directly.

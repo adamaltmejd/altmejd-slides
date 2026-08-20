@@ -1,0 +1,17 @@
+title: Altmejd Slides
+author: Adam Altmejd Selder
+version: 0.1.0
+quarto-required: ">=1.10.0"
+contributes:
+  formats:
+    revealjs:
+      theme:
+        - default
+        - theme.scss
+      center: false
+      slide-number: c/t
+      filters:
+        - altmejd-slides.lua
+        - slide-remote
+      revealjs-plugins:
+        - slide-remote

@@ -1,0 +1,232 @@
+/* slide-remote: deck-side styles. All selectors under .sr-* to avoid theme collisions. */
+
+.sr-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 10, 0.78);
+  backdrop-filter: blur(4px);
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  color: #f5f5f5;
+}
+
+.sr-overlay__panel {
+  position: relative;
+  background: #161616;
+  border-radius: 16px;
+  padding: 28px 32px 24px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+  max-width: 360px;
+  width: 90%;
+}
+
+.sr-overlay__close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: #c8c8c8;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 6px 10px;
+}
+.sr-overlay__close:hover {
+  color: #fff;
+}
+
+.sr-overlay__title {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sr-overlay__qr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+.sr-overlay__qr svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.sr-overlay__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+.sr-overlay__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.sr-overlay__label {
+  color: #8a8a8a;
+}
+.sr-overlay__code-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sr-overlay__code {
+  font-family:
+    ui-monospace,
+    SF Mono,
+    Menlo,
+    monospace;
+  letter-spacing: 0.04em;
+}
+
+.sr-overlay__link {
+  display: block;
+  margin: 14px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #93c5fd;
+  font-size: 12px;
+  font-family:
+    ui-monospace,
+    SF Mono,
+    Menlo,
+    monospace;
+  text-align: center;
+  text-decoration: none;
+  word-break: break-all;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.sr-overlay__link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #bfdbfe;
+}
+
+.sr-overlay__regen {
+  /* Inline ↻ icon next to the pair code: small, quiet, discoverable.
+     Sized to roughly match the surrounding monospace code text. */
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0 4px;
+  color: #6a6a6a;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 80ms ease;
+}
+.sr-overlay__regen:hover,
+.sr-overlay__regen:focus-visible {
+  color: #d4d4d4;
+  outline: none;
+}
+.sr-overlay__regen:active {
+  color: #fafafa;
+}
+
+.sr-overlay__hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #8a8a8a;
+  text-align: center;
+}
+
+.sr-badge {
+  /* Top-right so we don't collide with reveal.js's slide-number widget,
+     which sits in the bottom-right by default. */
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 2147483645;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.85);
+  color: #e5e5e5;
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  user-select: none;
+}
+/* Steady-state when paired: stay invisible so the deck looks untouched.
+   Disconnect/reconnect/failed states still surface (different data-state).
+   The 'data-flash' attribute drives the green paired-flash on each entry
+   into 'connected' — see StatusBadge.flashPaired() for the choreography. */
+.sr-badge[data-state="connected"] {
+  opacity: 0;
+  visibility: hidden;
+}
+.sr-badge[data-state="connected"][data-flash="visible"] {
+  opacity: 1;
+  visibility: visible;
+}
+.sr-badge[data-state="connected"][data-flash="fading"] {
+  opacity: 0;
+  visibility: visible;
+  transition: opacity 600ms ease;
+}
+.sr-badge[data-state="connected"][data-flash="hidden"] {
+  opacity: 0;
+  visibility: hidden;
+}
+.sr-badge__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4ade80;
+}
+.sr-badge[data-state="reconnecting"] .sr-badge__dot {
+  background: #facc15;
+  animation: sr-pulse 1.2s infinite;
+}
+.sr-badge[data-state="disconnected"] .sr-badge__dot {
+  background: #f87171;
+}
+@keyframes sr-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.sr-trigger {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  z-index: 2147483644;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(20, 20, 20, 0.7);
+  color: #fff;
+  font-size: 18px;
+  line-height: 36px;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: opacity 120ms ease;
+}
+.sr-trigger:hover {
+  opacity: 1;
+}
+/* Hide the launcher once the paired badge takes its corner. */
+body:has(.sr-badge) .sr-trigger {
+  display: none;
+}
