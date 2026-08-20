@@ -2,17 +2,20 @@ import { existsSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import puppeteer from "puppeteer-core";
 
-const [htmlPath, selector, noAgendaPath] = process.argv.slice(2);
+const [htmlPath, selector, noAgendaPath, showcasePath] = process.argv.slice(2);
 const chromePath = process.env.CHROME_PATH;
 
-if (!htmlPath || !selector || !noAgendaPath) {
-  throw new Error("usage: check_reveal_fixture.mjs HTML SELECTOR NO_AGENDA_HTML");
+if (!htmlPath || !selector || !noAgendaPath || !showcasePath) {
+  throw new Error("usage: check_reveal_fixture.mjs HTML SELECTOR NO_AGENDA_HTML SHOWCASE_HTML");
 }
 if (!existsSync(htmlPath)) {
   throw new Error(`rendered deck does not exist: ${htmlPath}`);
 }
 if (!existsSync(noAgendaPath)) {
   throw new Error(`rendered no-agenda deck does not exist: ${noAgendaPath}`);
+}
+if (!existsSync(showcasePath)) {
+  throw new Error(`rendered showcase deck does not exist: ${showcasePath}`);
 }
 if (!chromePath || !existsSync(chromePath)) {
   throw new Error("CHROME_PATH must point to a Chrome or Chromium executable");
@@ -99,6 +102,15 @@ try {
   );
   if (disabledAgendaSlides !== 0) {
     throw new Error(`agenda.enabled=false produced ${disabledAgendaSlides} agenda slides`);
+  }
+
+  await openReadyDeck(page, pathToFileURL(showcasePath).href);
+  const publicWorkerUrl = await page.$eval(
+    'meta[name="slide-remote-worker-url"]',
+    (element) => element.content,
+  );
+  if (publicWorkerUrl !== "") {
+    throw new Error("public showcase must not configure a Slide Remote Worker URL");
   }
 } finally {
   await browser.close();

@@ -13,7 +13,6 @@ format:
     width: 1600
     height: 900
 slide-remote:
-  worker-url: https://slide-remote.adamaltmejd.workers.dev
   show-button: false
   disable-on-params: [pdf, handout]
 ---

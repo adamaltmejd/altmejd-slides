@@ -1,9 +1,9 @@
 # Altmejd Slides
 
-`altmejd-slides` is Adam Altmejd Selder's private Quarto Reveal format for
-research talks and lectures. It has one opinionated default design, based on
-the EC7422 palette, and a small YAML surface for the choices that should vary
-between decks.
+`altmejd-slides` is Adam Altmejd Selder's personal Quarto Reveal format for
+research talks and lectures. It has one opinionated default design, built
+around a burgundy, cream, coral, and slate palette, and a small YAML surface
+for the choices that should vary between decks.
 
 Quarto and Pandoc remain responsible for document processing and slide
 construction. The extension adds the theme, automatic section agendas,
@@ -12,29 +12,37 @@ speaker-note handouts, and a pinned copy of
 
 ## Start a deck
 
-Clone the private repository once on each machine, then create a deck from the
-local starter template:
+Create a new deck directly from the public starter template:
 
 ```sh
-gh repo clone adamaltmejd/altmejd-slides ~/Code/altmejd-slides
-quarto use template ~/Code/altmejd-slides
+quarto use template adamaltmejd/altmejd-slides
 ```
 
 To add or update only the extension in an existing Quarto project:
 
 ```sh
-quarto add ~/Code/altmejd-slides --no-prompt
+quarto add adamaltmejd/altmejd-slides
+quarto update adamaltmejd/altmejd-slides
 ```
 
-Current Quarto releases fetch GitHub extension archives without GitHub
-authentication, so the usual `quarto add owner/repository` shorthand does not
-work for this private repository. The authenticated local clone is deliberate.
+Pin a deck to a released extension when reproducibility matters:
+
+```sh
+quarto add adamaltmejd/altmejd-slides@v0.1.0
+```
 
 The complete copyable front matter lives in [`template.qmd`](template.qmd).
 
+## Preview
+
+The current showcase is published at
+[adamaltmejd.github.io/altmejd-slides](https://adamaltmejd.github.io/altmejd-slides/).
+It uses the real extension but deliberately leaves Slide Remote unconfigured,
+so opening the public preview does not allocate a remote-control session.
+
 ## Configure it
 
-The course palette and automatic section agendas are defaults. A deck can
+The built-in palette and automatic section agendas are defaults. A deck can
 override only what it needs:
 
 ```yaml
@@ -116,3 +124,12 @@ Quarto version pinned in CI.
 
 The architecture and public boundaries are recorded in
 [`docs/architecture.md`](docs/architecture.md).
+
+## Releases
+
+Quarto copies extensions into each consuming project, so releases are simple
+checkpoints rather than a separate package registry. The version in
+`_extensions/altmejd-slides/_extension.yml` is tagged as `vX.Y.Z`; GitHub
+Releases records the notes, and consuming decks can opt into that tag. The
+root `package.json` remains private to prevent accidental npm publication—its
+tools are for developing the Quarto extension, not a JavaScript package.

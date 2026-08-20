@@ -9,7 +9,7 @@
     "format": "biome check --write .",
     "lint": "biome check .",
     "test": "python3 -m unittest discover -s tools/tests -p 'test_*.py'",
-    "test:browser": "node tools/check_reveal_fixture.mjs _site/tests/fixtures/regression.html '#near-cap-code-block pre' _site/tests/fixtures/no-agenda.html",
+    "test:browser": "node tools/check_reveal_fixture.mjs _site/tests/fixtures/regression.html '#near-cap-code-block pre' _site/tests/fixtures/no-agenda.html _site/examples/showcase.html",
     "render:examples": "quarto render",
     "pdf:examples": "python3 tools/render_revealjs_pdfs.py --site-dir _site --glob 'examples/*.html' --output-dir output/pdf"
   },

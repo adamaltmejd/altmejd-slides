@@ -15,6 +15,11 @@ Repository tooling, examples, tests, and documentation are excluded from
 starter-template output by `.quartoignore`. Ordinary `quarto add` already
 copies only the extension directory.
 
+GitHub is the distribution and release boundary. Quarto installs the public
+repository directly and vendors the extension into each consuming project.
+Version tags provide stable checkpoints without an additional package
+registry.
+
 ## Configuration contract
 
 Quarto-native presentation options stay under
@@ -47,6 +52,10 @@ by the format. Its filter and Reveal plugin remain separate from theme code;
 the bundle is updated intentionally from its upstream repository rather than
 forked in place.
 
+The public showcase omits `slide-remote.worker-url`. The plugin still loads,
+but exits before creating a session or opening a WebSocket. Personal decks
+configure the Worker URL in their own YAML.
+
 Quarto's Reveal instance remains authoritative. A future interactive React
 component may mount inside a slide, but it must ship as a prebuilt island with
 a deterministic static/PDF state. `@revealjs/react` does not own the deck.
@@ -65,6 +74,13 @@ renderer configuration, lockfile, and browser fingerprint.
 
 Presentation PDFs are visual artifacts, not guaranteed PDF/UA documents. A
 paper-like tagged handout would be a separate output format.
+
+## Public preview
+
+CI renders the showcase once, copies its HTML to `index.html` beside the same
+relative asset tree, and deploys that directory to GitHub Pages after all
+validation passes. Pages therefore previews the tested artifact without a
+second site framework or a checked-in build directory.
 
 ## Compatibility policy
 
