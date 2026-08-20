@@ -67,7 +67,7 @@ jobs:
             --chrome-path "$chrome_path"
 
       - name: Upload PDF regression artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: reveal-pdf-regression
           path: output/pdf/tests/fixtures/*.pdf
