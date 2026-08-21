@@ -9,6 +9,7 @@ altmejd-slides:
   agenda:
     heading: "Road map"
     bullets: numbered
+    clickable: true
 ---
 
 # First section

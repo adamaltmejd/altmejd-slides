@@ -60,6 +60,17 @@ Does reliable evening access help students make progress?
 3. The effect is concentrated among students with inflexible schedules.
 :::
 
+::: {.live-only}
+> A live-only prompt for the room: what sign would you expect, and why? This
+> blockquote sits in `::: {.live-only}`, so it never reaches the handout.
+:::
+
+::: {.handout-only}
+A `.handout-only` reading note: wrap any block in `::: {.handout-only}` to add
+guidance that appears only in `?handout=true` and the handout PDF, where the
+live deck shows a discussion prompt instead.
+:::
+
 ::: notes
 Fragments must collapse to one final-state page in both PDF variants.
 :::
@@ -82,6 +93,17 @@ A SIMPLE RULE, A LINKED PANEL, AND A SHARP THRESHOLD
 ::::
 
 [^assignment]: The fictional rule is deterministic within each application round.
+
+## The space itself {.full-bleed background-image="assets/field.svg" background-size="cover" #study-space}
+
+Reading rooms stay open until midnight during teaching terms.
+
+A `.full-bleed` slide: `background-image` fills the canvas, the title and
+these captions ride on scrim chips, and the credit is a `.attribution` div.
+
+::: {.attribution}
+Synthetic dusk scene · generated illustration, not a photograph
+:::
 
 ## A descriptive pattern {#descriptive-pattern}
 
@@ -112,6 +134,20 @@ panel constructed only to test a labelled research figure.
 Synthetic administrative records, deliberately formatted like a compact
 research-table source note.
 :::
+
+## The sample at a glance {#sample-at-a-glance}
+
+::: {.stat-row}
+[12,480]{.stat} applications received
+
+[4,087]{.stat} students within bandwidth
+
+[4]{.stat} terms of linked outcomes
+:::
+
+A `.stat-row` keeps up to three magnitudes readable from the back of a seminar
+room. Each pair is one paragraph inside `::: {.stat-row}`, number first:
+`[4,087]{.stat} students within bandwidth`.
 
 # Research design
 
@@ -156,12 +192,39 @@ $$
 [First stage: $\widehat{\pi}_1$](#first-stage)
 :::
 
+## What must hold {#what-must-hold}
+
+::: {.callout-note title="Estimand"}
+$\beta$ is the local average effect of evening access for applicants at the
+margin of eligibility, $r_i = 0$.
+:::
+
+::: {.callout-important title="Identifying assumption"}
+Potential outcomes are continuous in the priority score at the threshold:
+nothing but access changes discontinuously at $s_i = 60$.
+:::
+
+::: {.callout-warning title="Caveat"}
+Continuity is not testable directly; the diagnostics on the next slides probe
+its observable implications.
+:::
+
+::: {.aside}
+Semantic boxes are Quarto callouts restyled by the theme: `.callout-note`
+defines, `.callout-tip` states results, `.callout-important` holds
+assumptions, and `.callout-warning` flags caveats.
+:::
+
 ## First stage: access at the cutoff {#first-stage}
 
 ![](assets/threshold.svg){.r-stretch fig-alt="Synthetic regression discontinuity plot with a large access jump at the threshold"}
 
 - Access increases by **31 percentage points** at the threshold.
 - The first-stage interval excludes zero in every bandwidth shown.
+
+::: {.slide-nav}
+[Estimating equations](#estimating-equations){.back}
+:::
 
 ## Design diagnostics {#design-diagnostics}
 
@@ -195,6 +258,25 @@ $$
 
 EFFECTS, UNCERTAINTY, AND USEFUL ALTERNATIVES
 
+## Outcomes around the threshold {#outcome-buildup}
+
+::: {.r-stack}
+![](assets/buildup-points.svg){width="1150" fig-alt="Synthetic binned course completion by priority score"}
+
+![](assets/buildup-fit.svg){.fragment width="1150" fig-alt="The same binned outcomes with local linear fits and the estimated jump"}
+:::
+
+::: {.aside}
+A figure build-up: images stacked in `::: {.r-stack}`, later layers tagged
+`{.fragment}`. Layers share the same base image, so each step reads as adding
+to the plot.
+:::
+
+::: notes
+The fit layer shares the points layer's base, so the fragment reads as adding
+the fit. PDFs keep only the final state.
+:::
+
 ## Main effect after two terms {#main-effect}
 
 ::: {.columns}
@@ -210,8 +292,8 @@ EFFECTS, UNCERTAINTY, AND USEFUL ALTERNATIVES
 :::
 
 ::: {.aside}
-Illustrative values only. The visible aside reserves space in live slides and
-stacks above the speaker note in handout mode.
+Illustrative values only. This box is a `::: {.aside}`: it reserves its space
+in live slides and stacks above the speaker note in handout mode.
 :::
 
 ::: notes
@@ -223,6 +305,21 @@ figure-plus-aside-plus-note handout regression.
 [Design](#estimating-equations){.back}
 [Dynamics](#effects-over-time)
 [Robustness](#robustness-summary)
+:::
+
+## The headline result {.statement #headline-result}
+
+::: {.stat-row}
+[**+0.18**]{.stat} courses completed per term at the threshold
+:::
+
+Reliable evening access moves real course progress for marginal applicants —
+in fully synthetic data.
+
+::: {.aside}
+A statement slide: add `{.statement}` to the heading, which becomes the
+kicker. The number is `[**+0.18**]{.stat}` inside a `::: {.stat-row}`; bold
+gives it the accent ink.
 :::
 
 ## Effects over time and outcomes {#effects-over-time}
@@ -240,7 +337,7 @@ figure-plus-aside-plus-note handout regression.
 :::
 ::::
 
-[Alternative outcome](#appendix-alternative)
+[Main result](#main-effect){.back} · [Alternative outcome](#appendix-alternative)
 
 ## A possible pathway {#possible-pathway}
 
@@ -263,10 +360,15 @@ figure-plus-aside-plus-note handout regression.
 
 | Specification | Estimate | Standard error | $N$ |
 |:--------------|---------:|---------------:|----:|
-| Baseline | 0.18 | 0.06 | 4,087 |
+| Baseline | [0.18]{.emph} | 0.06 | 4,087 |
 | Narrow bandwidth | 0.20 | 0.08 | 2,744 |
 | Donut specification | 0.17 | 0.07 | 3,801 |
 | Covariate adjustment | 0.18 | 0.06 | 4,087 |
+
+::: {.table-note}
+Standard errors clustered by student · this source line is a `.table-note`
+div, and the boxed coefficient above is `[0.18]{.emph}`.
+:::
 
 ::: {.slide-nav}
 [Main result](#main-effect){.back}
@@ -307,6 +409,11 @@ WHAT THE SYNTHETIC EXERCISE WOULD SUPPORT
 2. Evening access raises short-run course progress in the mock data.
 3. Schedule constraints provide a plausible—but not separately identified—pathway.
 
+::: {.callout-tip title="Result"}
+At the margin of eligibility, evening access raises completion by 0.18
+courses per term over the first two terms.
+:::
+
 ::: {.attribution}
 `altmejd-slides` canonical showcase · all results synthetic
 :::
@@ -314,6 +421,17 @@ WHAT THE SYNTHETIC EXERCISE WOULD SUPPORT
 ::: notes
 Return to the opening constraint, then state the scope condition once.
 :::
+
+## Thank you {.closing-slide #thanks}
+
+adam\@altmejd.se · [adamaltmejd.se](https://adamaltmejd.se)
+
+Draft, slides, and replication code: [github.com/adamaltmejd](https://github.com/adamaltmejd)
+
+A closing slide: `## Thank you {.closing-slide}` with contact lines; the code
+in the corner is generated from `[alt text](url){.qr}` at render time.
+
+[QR code linking to adamaltmejd.se](https://adamaltmejd.se){.qr}
 
 # Appendix
 
@@ -323,14 +441,39 @@ BACKUP CHECKS AND IMPLEMENTATION DETAILS
 
 ![](assets/estimate.svg){.r-stretch fig-alt="Synthetic estimate for credits earned"}
 
+::: {.aside}
+Navigation chips: internal links inside `::: {.slide-nav}`. Add `{.back}` to
+the return link and `{.primary}` only to the one emphasized action.
+:::
+
 ::: {.slide-nav}
 [Descriptive pattern](#descriptive-pattern){.back} ·
-[Main effect](#main-effect) ·
+[Main effect](#main-effect){.primary} ·
 [Dynamics](#effects-over-time) ·
 [Narrow bandwidth](#robustness-summary) ·
 [Donut specification](#appendix-placebo) ·
 [Schedule pathway](#appendix-mechanism) ·
 [Specification](#reproducible-specification)
+:::
+
+## Bandwidth sensitivity {#appendix-bandwidth}
+
+::: {.figure-panels}
+::: {.figure-panel}
+**Estimates across bandwidths**
+
+![](assets/estimate.svg){fig-alt="Synthetic estimates across alternative bandwidths"}
+:::
+:::
+
+::: {.aside}
+An explicit one-panel layout: `::: {.figure-panels}` with a single
+`::: {.figure-panel}` child whose `**bold**` first line is the panel label.
+Two-image column pairs upgrade to this layout automatically.
+:::
+
+::: {.slide-nav}
+[Robustness summary](#robustness-summary){.back}
 :::
 
 ## Placebo outcome and reserved footer {#appendix-placebo}
@@ -392,6 +535,10 @@ This is inert illustrative code. Handout mode must not leave non-selected lines
 dimmed, and PDF export must keep only the final highlighted state.
 :::
 
+::: {.slide-nav}
+[Alternative outcome](#appendix-alternative){.back}
+:::
+
 ## Design contract {.light-bg background-color="#f1f5f9" #design-contract}
 
 This compact deck now exercises the normal development surface:
@@ -400,7 +547,9 @@ This compact deck now exercises the normal development surface:
 - plain section agendas, footers, progress, and `c/t` numbering;
 - nested text, tables, equations, code, fragments, and custom backgrounds;
 - single and paired SVGs, varied aspect ratios, asides, notes, and attribution;
-- reciprocal internal navigation and a compact appendix link set.
+- reciprocal internal navigation and a compact appendix link set;
+- statement and stat-row emphasis, semantic callouts, figure build-ups;
+- a full-bleed photograph slide, a closing slide, and mode-gated content.
 
 ::: {.attribution}
 Fast to render · deterministic · offline
