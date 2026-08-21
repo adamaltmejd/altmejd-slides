@@ -208,6 +208,13 @@ local function read_metadata(meta)
     version = "0.2.0",
     scripts = { "resources/runtime.js" },
   })
+  -- Bundled OFL typefaces, vendored like KaTeX so rendering and PDF capture
+  -- never depend on host-installed fonts.
+  quarto.doc.add_html_dependency({
+    name = "altmejd-slides-fonts",
+    version = "0.2.0",
+    stylesheets = { "resources/fonts/fonts.css" },
+  })
   if bundled_math then
     quarto.doc.add_html_dependency({
       name = "altmejd-slides-katex",

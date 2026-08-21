@@ -129,6 +129,11 @@ Title slides remain simple for one or two authors. Four authors use one compact
 row; five or six use two rows. Each author's affiliations are comma-separated
 in the same cell.
 
+The format bundles its typefaces: Schibsted Grotesk for headings and text and
+JetBrains Mono for code and slide numbers, both vendored as variable WOFF2
+files under the SIL Open Font License. Decks therefore typeset identically on
+every machine — including CI-rendered PDFs — without a font CDN.
+
 The format bundles and defaults to KaTeX 0.18.4 for fast, consistent TeX
 typography without a runtime CDN dependency. Set `altmejd-slides.math: false`
 and choose a native Quarto `html-math-method` only when a different renderer is
