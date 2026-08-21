@@ -203,6 +203,16 @@ try {
       width: rect(math).width,
     }));
 
+    // Shown before compact-navigation on purpose: both live in the same
+    // vertical stack, only the stack's active child keeps a layout, and the
+    // lazily-built navRows rects below need compact-navigation to stay the
+    // active stack child until the return object is constructed.
+    const darkSlide = await show("dark-background-navigation");
+    const darkChip = darkSlide.querySelector(".slide-nav a");
+    const darkChipColor = getComputedStyle(darkChip).color;
+    const darkChipBackground = getComputedStyle(darkChip).backgroundColor;
+    const darkSlideColor = getComputedStyle(darkSlide).color;
+
     const navSlide = await show("compact-navigation");
     const navLinks = Array.from(navSlide.querySelectorAll(".slide-nav a"));
     const navFigure = navSlide.querySelector(":scope > img");
@@ -242,6 +252,7 @@ try {
         Math.abs(rect(asideNavigation).bottom - rect(asideSlide).bottom) < 2 &&
         rect(stretched).width > 100 &&
         rect(stretched).height > 100,
+      darkChipDistinct: darkChipColor !== darkSlideColor && darkChipColor !== darkChipBackground,
       backControl:
         backLink.classList.contains("back") &&
         !backLink.textContent.trim().toLowerCase().startsWith("back:") &&
@@ -324,6 +335,24 @@ try {
     };
   });
   console.log(JSON.stringify({ layout }));
+  // The threshold assertions below are one-directional, so a probe that
+  // returns NaN (for example after a theme rule is removed) must fail loudly
+  // instead of slipping through as a vacuously false comparison.
+  const numericProbes = [
+    "mainFontSize",
+    "mathNavGap",
+    "mathNavGroupGap",
+    "mathNavHeight",
+    "mathNavPadding",
+    "mathNavRadius",
+    "titleHeadingSize",
+    "titleRuleDifference",
+    "titleRuleThicknessDifference",
+  ];
+  const nonFiniteProbes = numericProbes.filter((key) => !Number.isFinite(layout[key]));
+  if (nonFiniteProbes.length > 0) {
+    throw new Error(`layout probes are not finite numbers: ${nonFiniteProbes.join(", ")}`);
+  }
   if (
     layout.mainFontSize !== 40 ||
     layout.titleColumns !== 4 ||
@@ -378,7 +407,8 @@ try {
     layout.navRows < 2 ||
     !layout.focusVisible ||
     !layout.asideReserved ||
-    !layout.backControl
+    !layout.backControl ||
+    !layout.darkChipDistinct
   ) {
     throw new Error(`navigation or live aside contract failed: ${JSON.stringify(layout)}`);
   }

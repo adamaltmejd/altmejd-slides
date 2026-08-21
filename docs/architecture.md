@@ -43,6 +43,12 @@ The format converts Pandoc math nodes to stable TeX-bearing spans and renders
 them with a vendored KaTeX build. KaTeX JavaScript, CSS, and fonts are copied as
 a normal Quarto HTML dependency, so equation rendering never depends on a CDN.
 
+Text typography follows the same rule: Schibsted Grotesk and JetBrains Mono
+are vendored as variable WOFF2 subsets (latin and latin-ext, upright and
+italic) with their OFL licenses in `resources/fonts/`, registered as an HTML
+dependency. The system stacks remain as fallbacks only; rendered decks and
+captured PDFs use the bundled faces on every host.
+
 Automatic agendas are on by default, without a visible heading or list markers.
 The same Lua filter collects level-one headings, inserts the configured agenda
 content for each section divider, and treats direct section content as a kicker.

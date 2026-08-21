@@ -226,6 +226,12 @@ async function auditShowcase(page, url, mode) {
       .filter((name) => /^https?:/i.test(name));
 
     return {
+      // check() is true only for loaded faces; both families are used on
+      // every deck (body text and the slide number), so by the end of the
+      // sweep the bundled fonts must have resolved.
+      bundledFonts:
+        document.fonts.check('740 16px "Schibsted Grotesk"') &&
+        document.fonts.check('400 16px "JetBrains Mono"'),
       agendaFailures,
       agendas: document.querySelectorAll(".slides section.agenda-slide").length,
       authorCount: authors.length,
@@ -259,6 +265,7 @@ async function auditShowcase(page, url, mode) {
 
 function assertAudit(name, audit, expectedHandout) {
   const failures = {
+    bundledFonts: !audit.bundledFonts,
     agendaFailures: audit.agendaFailures,
     authorOverlap: audit.authorOverlap,
     brokenImages: audit.brokenImages,
@@ -302,7 +309,9 @@ try {
     const page = await browser.newPage();
     page.on("pageerror", (error) => browserProblems.push(`pageerror: ${error.message}`));
     page.on("console", (message) => {
-      if (["error", "warning"].includes(message.type())) {
+      // Puppeteer's CDP transport reports console.warn as "warn"; "warning"
+      // is kept in case another transport still uses the legacy name.
+      if (["error", "warning", "warn"].includes(message.type())) {
         browserProblems.push(`${message.type()}: ${message.text()}`);
       }
     });

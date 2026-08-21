@@ -174,3 +174,13 @@ The PDF renderer should expose a visible overflow cue or fail its overflow check
 - Second
 - Third
 :::
+
+## Dark background navigation {.dark-bg background-color="#1e293b" #dark-background-navigation}
+
+Navigation chips must keep their own light-surface contrast pair here instead
+of inheriting the dark-slide white link color.
+
+::: {.slide-nav}
+[Back to notes](#notes-and-aside){.back}
+[Fragments](#fragments)
+:::

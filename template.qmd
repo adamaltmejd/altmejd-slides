@@ -27,7 +27,7 @@ altmejd-slides:
     success: "#c9cba3"
     surface: "#f1f5f9"
     border: "#e2e8f0"
-    muted: "#64748b"
+    muted: "#5b6a80"
   agenda:
     enabled: true
     heading: false

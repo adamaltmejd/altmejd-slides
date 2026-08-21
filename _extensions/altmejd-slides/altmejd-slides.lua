@@ -49,6 +49,36 @@ local css_color_functions = {
   color = true,
 }
 
+-- The CSS named colors, so keyword typos warn instead of silently producing
+-- an invalid custom-property value downstream.
+local css_named_colors = {}
+for name in ([[
+aliceblue antiquewhite aqua aquamarine azure beige bisque black
+blanchedalmond blue blueviolet brown burlywood cadetblue chartreuse
+chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan
+darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta
+darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen
+darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink
+deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen
+fuchsia gainsboro ghostwhite gold goldenrod gray green greenyellow grey
+honeydew hotpink indianred indigo ivory khaki lavender lavenderblush
+lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow
+lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen
+lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime
+limegreen linen magenta maroon mediumaquamarine mediumblue mediumorchid
+mediumpurple mediumseagreen mediumslateblue mediumspringgreen
+mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin
+navajowhite navy oldlace olive olivedrab orange orangered orchid
+palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff
+peru pink plum powderblue purple rebeccapurple red rosybrown royalblue
+saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue
+slateblue slategray slategrey snow springgreen steelblue tan teal thistle
+tomato transparent turquoise violet wheat white whitesmoke yellow
+yellowgreen
+]]):gmatch("%S+") do
+  css_named_colors[name] = true
+end
+
 local function as_boolean(value, fallback)
   if value == nil then
     return fallback
@@ -75,7 +105,7 @@ local function is_css_color(value)
   end
 
   if value:match("^[%a][%a%-]*$") then
-    return true
+    return css_named_colors[value:lower()] == true
   end
 
   local name, arguments = value:match("^([%a]+)%((.*)%)$")
@@ -175,8 +205,15 @@ local function read_metadata(meta)
 
   quarto.doc.add_html_dependency({
     name = "altmejd-slides-runtime",
-    version = "0.2.0",
+    version = "0.3.0",
     scripts = { "resources/runtime.js" },
+  })
+  -- Bundled OFL typefaces, vendored like KaTeX so rendering and PDF capture
+  -- never depend on host-installed fonts.
+  quarto.doc.add_html_dependency({
+    name = "altmejd-slides-fonts",
+    version = "0.3.0",
+    stylesheets = { "resources/fonts/fonts.css" },
   })
   if bundled_math then
     quarto.doc.add_html_dependency({
@@ -187,7 +224,7 @@ local function read_metadata(meta)
     })
     quarto.doc.add_html_dependency({
       name = "altmejd-slides-math",
-      version = "0.2.0",
+      version = "0.3.0",
       scripts = { "resources/math.js" },
     })
   end

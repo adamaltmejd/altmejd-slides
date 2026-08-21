@@ -8,8 +8,17 @@ $primary: #644043 !default;
 $link-color: $primary !default;
 $selection-bg: rgba(146, 79, 91, 0.28) !default;
 
-$font-family-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif !default;
-$font-family-monospace: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace !default;
+// The named families are bundled with the format (resources/fonts); the rest
+// of each stack is the fallback for the instant before they load.
+$font-family-sans-serif:
+  "Schibsted Grotesk",
+  -apple-system,
+  BlinkMacSystemFont,
+  "Segoe UI",
+  Arial,
+  sans-serif !default;
+$font-family-monospace: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
+  monospace !default;
 $presentation-heading-font: $font-family-sans-serif !default;
 $presentation-font-size-root: 40px !default;
 $presentation-heading-color: $body-color !default;
@@ -26,7 +35,7 @@ $altmejd-info: #924f5b !default;
 $altmejd-success: #c9cba3 !default;
 $altmejd-surface: #f1f5f9 !default;
 $altmejd-border: #e2e8f0 !default;
-$altmejd-muted: #64748b !default;
+$altmejd-muted: #5b6a80 !default;
 $altmejd-code-bg: mix($altmejd-success, $body-bg, 24%) !default;
 $altmejd-output-bg: mix($altmejd-border, $body-bg, 72%) !default;
 $altmejd-code-max-height: 480px !default;
@@ -36,6 +45,12 @@ $altmejd-agenda-bg: $altmejd-primary !default;
 $altmejd-agenda-color: $altmejd-secondary !default;
 $altmejd-radius: 5px !default;
 $altmejd-gap: 0.45rem !default;
+// The heading rule and the title-slide rule are derived from these three
+// numbers, so the two rules stay aligned when any of them changes.
+$altmejd-rule-thickness: 4px !default;
+$altmejd-heading-scale: 1.28 !default;
+$altmejd-heading-line-height: 1.2 !default;
+$altmejd-heading-rule-pad: 0.28 !default;
 $altmejd-aside-max-height: 26% !default;
 $altmejd-handout-note-max-height: 32% !default;
 
@@ -104,8 +119,9 @@ $code-bg: $altmejd-code-bg !default;
 .reveal .slide h2 {
   position: relative;
   margin-bottom: 0.8em;
-  padding-bottom: 0.28em;
-  font-size: 1.28em;
+  padding-bottom: #{$altmejd-heading-rule-pad}em;
+  font-size: #{$altmejd-heading-scale}em;
+  line-height: $altmejd-heading-line-height;
 }
 
 .reveal .slide h2::after {
@@ -114,7 +130,7 @@ $code-bg: $altmejd-code-bg !default;
   right: 0;
   bottom: 0;
   left: 0;
-  height: 4px;
+  height: $altmejd-rule-thickness;
   background: linear-gradient(
     90deg,
     var(--altmejd-heading-line-start),
@@ -131,7 +147,9 @@ $code-bg: $altmejd-code-bg !default;
 }
 
 .reveal .slide strong {
-  color: var(--altmejd-accent);
+  // Ink the accent toward the foreground for emphasis text so it holds
+  // contrast at small sizes; pure accent remains for figures and focus rings.
+  color: color-mix(in srgb, var(--altmejd-accent) 85%, var(--altmejd-foreground));
   font-weight: 650;
 }
 
@@ -200,7 +218,43 @@ $code-bg: $altmejd-code-bg !default;
   );
 }
 
+// Map Pandoc's highlight tokens onto the deck palette in place of the stock
+// highlighter colors. Mixes keep YAML color overrides in effect and hold
+// 4.5:1 on the tinted code background.
+.reveal .slide code span:is(.co, .do, .an, .cv, .in, .wa) {
+  color: var(--altmejd-muted);
+  font-style: italic;
+}
+
+.reveal .slide code span:is(.kw, .cf, .im) {
+  color: var(--altmejd-primary);
+  font-weight: 650;
+}
+
+.reveal .slide code span.fu {
+  color: var(--altmejd-info);
+}
+
+.reveal .slide code span.at {
+  color: var(--altmejd-muted);
+}
+
+.reveal .slide code span:is(.st, .vs, .ss, .ch) {
+  color: color-mix(in srgb, var(--altmejd-success) 42%, var(--altmejd-foreground));
+}
+
+.reveal .slide code span:is(.dv, .bn, .fl, .cn, .sc, .ot) {
+  color: color-mix(in srgb, var(--altmejd-accent) 70%, var(--altmejd-foreground));
+}
+
+.reveal .slide code span:is(.er, .al) {
+  color: color-mix(in srgb, var(--altmejd-accent) 85%, var(--altmejd-foreground));
+  font-weight: 650;
+}
+
 .reveal .slide table {
+  // Tables are centered objects in this format, like standalone figures.
+  margin-inline: auto;
   font-size: 0.82em;
 }
 
@@ -244,19 +298,32 @@ $code-bg: $altmejd-code-bg !default;
 }
 
 .reveal .slide-number {
-  color: var(--altmejd-muted);
   font-family: $font-family-monospace;
+}
+
+// Quarto's footer stylesheet and background classes are applied after the
+// compiled theme, so these selectors carry the extra specificity needed to
+// stay live. Slides with genuinely dark backgrounds keep Quarto's white.
+.reveal .slide-number:not(.has-dark-background) {
+  color: var(--altmejd-muted);
   font-size: 0.42em;
 }
 
-.reveal .footer {
-  color: color-mix(
-    in srgb,
-    var(--altmejd-muted) 70%,
-    var(--altmejd-background)
-  );
+// The footer is quiet bottom-left chrome, mirroring the slide number's
+// corner. The paddings clear the menu button and the slide number.
+.reveal .footer.footer {
+  box-sizing: border-box;
+  padding-right: 96px;
+  padding-left: 54px;
+  overflow: hidden;
   font-size: 0.34em;
+  white-space: nowrap;
   text-align: left;
+  text-overflow: ellipsis;
+}
+
+.reveal .footer:not(.has-dark-background) {
+  color: var(--altmejd-muted);
 }
 
 // Quarto-native title fields form an editorial cover grid: event and date at
@@ -278,11 +345,16 @@ $code-bg: $altmejd-code-bg !default;
   content: "";
   position: absolute;
   // Align with the rule below a one-line slide heading. The offset is the
-  // heading's line box plus bottom padding, less the rule itself.
-  top: calc(1.8944em - 4px);
+  // heading's line box plus bottom padding, less the rule itself, derived
+  // from the shared heading tokens so the two rules cannot drift apart.
+  top: calc(
+    #{($altmejd-heading-scale * $altmejd-heading-line-height) +
+      ($altmejd-heading-rule-pad * $altmejd-heading-scale)}em -
+      #{$altmejd-rule-thickness}
+  );
   right: 0;
   left: 0;
-  height: 4px;
+  height: $altmejd-rule-thickness;
   background: linear-gradient(
     90deg,
     var(--altmejd-heading-line-start),
@@ -409,6 +481,17 @@ $code-bg: $altmejd-code-bg !default;
   color: #fff;
 }
 
+// Navigation chips carry their own light surface, so they keep their normal
+// contrast pair instead of inheriting the dark-slide white link color.
+.reveal .slides section.dark-bg .slide-nav a {
+  color: var(--altmejd-primary);
+}
+
+.reveal .slides section.dark-bg .slide-nav .primary > a,
+.reveal .slides section.dark-bg .slide-nav a.primary {
+  color: var(--altmejd-background);
+}
+
 // Section agendas are generated by default and can be configured in YAML.
 .reveal .slides section.agenda-slide {
   display: flex !important;
@@ -430,6 +513,28 @@ $code-bg: $altmejd-code-bg !default;
 .reveal:has(.slides section.agenda-slide.present) .footer {
   // Quarto loads its footer support stylesheet after the compiled theme.
   display: none !important;
+}
+
+// Recolor the remaining chrome while a divider covers the viewport, so the
+// slide number and progress bar stay legible on the agenda surface.
+.reveal:has(.slides section.agenda-slide.present) .slide-number {
+  color: color-mix(
+    in srgb,
+    var(--altmejd-agenda-foreground) 80%,
+    var(--altmejd-agenda-background)
+  );
+}
+
+.reveal:has(.slides section.agenda-slide.present) .progress {
+  background: color-mix(
+    in srgb,
+    var(--altmejd-agenda-foreground) 18%,
+    transparent
+  );
+}
+
+.reveal:has(.slides section.agenda-slide.present) .progress span {
+  background: var(--altmejd-agenda-foreground);
 }
 
 .reveal .slides section.agenda-slide > h1 {
@@ -608,11 +713,16 @@ $code-bg: $altmejd-code-bg !default;
   position: absolute;
   top: 50%;
   right: 0;
+  // A wrapped vertical line would read in the wrong order after the
+  // rotation, so the attribution stays a single clipped line.
+  max-height: 100%;
   margin: 0;
+  overflow: hidden;
   color: var(--altmejd-muted);
   font-size: 0.46em;
   line-height: 1;
   text-align: center;
+  white-space: nowrap;
   transform: translateY(-50%) rotate(180deg);
   transform-origin: center;
   writing-mode: vertical-lr;
@@ -738,6 +848,17 @@ $code-bg: $altmejd-code-bg !default;
   text-align: center;
 }
 
+// The canonical `**Label**` panel heading is structure, not emphasis, so it
+// keeps the label color instead of the accent that strong normally takes.
+.reveal
+  .slide
+  .figure-panels
+  > :is(.column, .figure-panel)
+  > :first-child:not(:has(img))
+  strong {
+  color: inherit;
+}
+
 .reveal .slide .figure-panels > :is(.column, .figure-panel) > p:has(> img:only-child),
 .reveal .slide .figure-panels > :is(.column, .figure-panel) > figure,
 .reveal .slide .figure-panels > :is(.column, .figure-panel) > .quarto-figure {
@@ -801,6 +922,64 @@ html.altmejd-handout .reveal .slide > aside.notes > :first-child {
 
 html.altmejd-handout .reveal .slide > aside.notes > :last-child {
   margin-bottom: 0;
+}
+
+// The Reveal menu ships its own dark chrome; restyle it to the deck palette.
+// The `body` prefix outranks the plugin stylesheet, which loads later.
+body .slide-menu-wrapper .slide-menu {
+  color: var(--altmejd-foreground);
+  background-color: var(--altmejd-background);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--altmejd-foreground) 25%, transparent);
+}
+
+body .slide-menu-wrapper .slide-menu-toolbar {
+  background-color: var(--altmejd-background);
+  border-bottom: 1px solid var(--altmejd-border);
+}
+
+body .slide-menu-wrapper .slide-menu-toolbar > li.toolbar-panel-button {
+  color: var(--altmejd-muted);
+  background-color: transparent;
+}
+
+body .slide-menu-wrapper .slide-menu-toolbar > li.active-toolbar-button,
+body .slide-menu-wrapper .slide-menu-toolbar > li.toolbar-panel-button:hover {
+  color: var(--altmejd-primary);
+  text-shadow: none;
+}
+
+body .slide-menu-wrapper li.slide-menu-item,
+body .slide-menu-wrapper li.slide-menu-item-vertical {
+  color: var(--altmejd-foreground);
+  border-bottom-color: var(--altmejd-border);
+}
+
+body .slide-menu-wrapper .slide-menu-item a,
+body .slide-menu-wrapper .slide-menu-item-vertical a {
+  color: inherit;
+}
+
+body .slide-menu-wrapper li.slide-menu-item.past,
+body .slide-menu-wrapper li.slide-menu-item-vertical.past,
+body .slide-menu-wrapper li.slide-menu-item.future,
+body .slide-menu-wrapper li.slide-menu-item-vertical.future {
+  color: var(--altmejd-muted);
+}
+
+// The plugin scopes its current-slide styles to `.active-menu-panel`, so
+// these carry the same scope plus the `body` prefix to win the cascade.
+body .slide-menu-wrapper .active-menu-panel li.active {
+  color: var(--altmejd-primary);
+}
+
+body .slide-menu-wrapper .active-menu-panel li.selected {
+  color: var(--altmejd-primary);
+  background-color: color-mix(in srgb, var(--altmejd-primary) 10%, var(--altmejd-background));
+}
+
+body .slide-menu-wrapper li.slide-menu-item:hover,
+body .slide-menu-wrapper li.slide-menu-item-vertical:hover {
+  background-color: var(--altmejd-surface);
 }
 
 @media (max-width: 700px) {
