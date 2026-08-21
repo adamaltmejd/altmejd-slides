@@ -17,6 +17,7 @@ from tools.render_revealjs_pdfs import (
     cache_digest,
     collect_asset_paths,
     configured_modes,
+    css_references,
     deck_url,
     extract_reveal_dimensions,
     normalize_query,
@@ -144,6 +145,14 @@ class AssetAndCacheTests(unittest.TestCase):
                 },
             )
 
+    def test_css_references_ignore_commented_urls(self) -> None:
+        css = (
+            "/* url(commented-out.png) */\n"
+            "body { background: url(kept.png); }\n"
+            '/* @import "legacy.css"\n   url(multi-line.woff2) */\n'
+        )
+        self.assertEqual(css_references(css), ["kept.png"])
+
     def test_external_fetchable_resource_fails_but_link_is_allowed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             site = Path(temporary).resolve()
@@ -208,6 +217,15 @@ class RendererResolutionTests(unittest.TestCase):
 
             self.assertEqual(resolved, executable.resolve())
             self.assertEqual(len(fingerprint or ""), 64)
+
+    def test_missing_chrome_fails_fast(self) -> None:
+        with (
+            mock.patch.dict(os.environ, {}, clear=True),
+            mock.patch("tools.render_revealjs_pdfs.shutil.which", return_value=None),
+            mock.patch("tools.render_revealjs_pdfs.sys.platform", "linux"),
+            self.assertRaisesRegex(RenderError, "no Chrome or Chromium executable"),
+        ):
+            resolve_chrome(None)
 
     def test_resolves_exact_root_pin_and_hashes_lock(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

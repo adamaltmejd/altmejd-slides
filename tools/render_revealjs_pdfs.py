@@ -67,6 +67,7 @@ FETCHABLE_LINK_RELS = {
 }
 CSS_URL_RE = re.compile(r"url\(\s*(['\"]?)(.*?)\1\s*\)", re.IGNORECASE)
 CSS_IMPORT_RE = re.compile(r"@import\s+(?!url\()(['\"])(.*?)\1", re.IGNORECASE)
+CSS_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
 REVEAL_INITIALIZE_RE = re.compile(r"\bReveal\s*\.\s*initialize\s*\(")
 
 
@@ -399,6 +400,8 @@ def _local_reference_path(reference: str, base_file: Path, site_dir: Path) -> Pa
 
 
 def css_references(css_text: str) -> list[str]:
+    # Commented-out references must not fail the missing-resource preflight.
+    css_text = CSS_COMMENT_RE.sub(" ", css_text)
     references = [match.group(2) for match in CSS_URL_RE.finditer(css_text)]
     references.extend(match.group(2) for match in CSS_IMPORT_RE.finditer(css_text))
     return references
@@ -719,7 +722,7 @@ def positive_int(value: str) -> int:
     return parsed
 
 
-def resolve_chrome(path: Path | None) -> tuple[Path | None, str | None]:
+def resolve_chrome(path: Path | None) -> tuple[Path, str]:
     if path is None:
         configured = os.environ.get("CHROME_PATH") or os.environ.get("PUPPETEER_EXECUTABLE_PATH")
         if configured:
@@ -752,7 +755,10 @@ def resolve_chrome(path: Path | None) -> tuple[Path | None, str | None]:
                 break
 
     if path is None:
-        return None, None
+        raise RenderError(
+            "no Chrome or Chromium executable found; pass --chrome-path or set "
+            "CHROME_PATH (the bun install does not download a Puppeteer browser)"
+        )
     resolved = path.expanduser().resolve()
     if not resolved.is_file() or not os.access(resolved, os.X_OK):
         raise RenderError(f"Chrome executable is not runnable: {resolved}")

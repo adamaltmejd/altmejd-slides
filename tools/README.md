@@ -28,10 +28,10 @@ DeckTape is always invoked from the root `node_modules` installation pinned by
 package runner.
 
 The renderer uses `CHROME_PATH`, `PUPPETEER_EXECUTABLE_PATH`, or a common system
-Chrome/Chromium installation when one is available; otherwise DeckTape uses the
-browser installed with Puppeteer. Pass `--chrome-path /path/to/chrome` to choose
-explicitly. The selected executable's fingerprint becomes part of the PDF
-cache key.
+Chrome/Chromium installation when one is available, and fails fast when none is
+found (bun does not run Puppeteer's browser-download install script). Pass
+`--chrome-path /path/to/chrome` to choose explicitly. The selected executable's
+fingerprint becomes part of the PDF cache key.
 
 The default mode queries are:
 

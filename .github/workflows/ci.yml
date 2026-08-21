@@ -12,7 +12,6 @@ permissions:
 env:
   QUARTO_VERSION: "1.10.18"
   BUN_VERSION: "1.4.0"
-  RUFF_VERSION: "0.16.4"
 
 jobs:
   validate:
@@ -37,10 +36,8 @@ jobs:
           enable-cache: true
 
       - name: Check source and unit tests
-        run: |
-          bun run check
-          uvx "ruff==${RUFF_VERSION}" check tools
-          uvx "ruff==${RUFF_VERSION}" format --check tools
+        # The ruff version is pinned in the package.json lint:py script.
+        run: bun run check
 
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2

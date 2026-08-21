@@ -302,7 +302,9 @@ try {
     const page = await browser.newPage();
     page.on("pageerror", (error) => browserProblems.push(`pageerror: ${error.message}`));
     page.on("console", (message) => {
-      if (["error", "warning"].includes(message.type())) {
+      // Puppeteer's CDP transport reports console.warn as "warn"; "warning"
+      // is kept in case another transport still uses the legacy name.
+      if (["error", "warning", "warn"].includes(message.type())) {
         browserProblems.push(`${message.type()}: ${message.text()}`);
       }
     });

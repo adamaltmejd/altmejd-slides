@@ -8,6 +8,7 @@
         "@biomejs/biome": "2.5.9",
         "decktape": "3.16.1",
         "katex": "0.18.4",
+        "puppeteer-core": "24.40.0",
       },
     },
   },

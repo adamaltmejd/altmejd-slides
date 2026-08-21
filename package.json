@@ -5,9 +5,10 @@
   "description": "A customizable Quarto Reveal format for research and teaching presentations",
   "license": "MIT",
   "scripts": {
-    "check": "bun run lint && bun run test",
+    "check": "bun run lint && bun run lint:py && bun run test",
     "format": "biome check --write .",
     "lint": "biome check .",
+    "lint:py": "uvx --no-config 'ruff==0.16.4' check tools && uvx --no-config 'ruff==0.16.4' format --check tools",
     "test": "python3 -m unittest discover -s tools/tests -p 'test_*.py'",
     "test:browser": "node tools/check_reveal_fixture.mjs _site/tests/fixtures/regression.html '#near-cap-code-block pre' _site/tests/fixtures/no-agenda.html _site/examples/showcase.html _site/tests/fixtures/agenda-numbered.html _site/tests/fixtures/agenda-none.html && node tools/check_showcase.mjs _site/examples/showcase.html",
     "render:examples": "quarto render",
@@ -16,8 +17,10 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.9",
     "decktape": "3.16.1",
-    "katex": "0.18.4"
+    "katex": "0.18.4",
+    "puppeteer-core": "24.40.0"
   },
+  "trustedDependencies": [],
   "engines": {
     "bun": ">=1.4.0"
   }
