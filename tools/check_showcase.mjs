@@ -107,7 +107,7 @@ async function auditShowcase(page, url, mode) {
       );
       const note = Array.from(slide.children).find((child) => child.matches("aside.notes"));
       const navigation = Array.from(slide.children).find(
-        (child) => child.matches(".slide-nav, .slide-links") && visible(child),
+        (child) => child.matches(".slide-nav") && visible(child),
       );
       const visibleNote = handout && visible(note) ? note : undefined;
       const bottomBoxes = [aside, visibleNote, navigation].filter(Boolean);
@@ -215,7 +215,7 @@ async function auditShowcase(page, url, mode) {
       authorRects.some((right, rightIndex) => leftIndex < rightIndex && intersects(left, right)),
     );
 
-    const longNavigation = document.querySelector("#appendix-alternative .slide-links");
+    const longNavigation = document.querySelector("#appendix-alternative .slide-nav");
     const navigationLinks = Array.from(longNavigation.querySelectorAll("a"));
     const navigationRows = new Set(navigationLinks.map((link) => Math.round(rect(link).top))).size;
 

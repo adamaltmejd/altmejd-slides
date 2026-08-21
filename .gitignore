@@ -1,4 +1,5 @@
 /.quarto/
+/.ruff_cache/
 /_site/
 /.claude/
 **/*_files/

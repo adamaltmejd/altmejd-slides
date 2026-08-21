@@ -109,7 +109,7 @@ align, and the filter reserves the bottom link row.
 Use `.slide-nav` for compact internal navigation. Add `.back` to a return link
 or `.primary` only when an action genuinely needs emphasis. The quiet action row
 is fixed to the bottom-right footer line, after visible asides and handout notes,
-and wraps when needed. The existing `.slide-links` name is also supported:
+and wraps when needed:
 
 ```markdown
 ::: {.slide-nav}
@@ -129,7 +129,7 @@ Title slides remain simple for one or two authors. Four authors use one compact
 row; five or six use two rows. Each author's affiliations are comma-separated
 in the same cell.
 
-The format bundles and defaults to KaTeX 0.18.1 for fast, consistent TeX
+The format bundles and defaults to KaTeX 0.18.4 for fast, consistent TeX
 typography without a runtime CDN dependency. Set `altmejd-slides.math: false`
 and choose a native Quarto `html-math-method` only when a different renderer is
 deliberately required.
@@ -186,8 +186,8 @@ browser check visits every slide in desktop, narrow, and handout modes.
 [`tests/fixtures/regression.qmd`](tests/fixtures/regression.qmd) keeps only
 adversarial limits such as unusually long metadata, navigation, and code. The
 agenda fixtures cover deck-wide variants and an eleven-section research-talk
-outline. The supported baseline is the Quarto version pinned in CI; the large
-UCLS deck is an occasional release soak test, not the routine design fixture.
+outline. The supported baseline is the Quarto version pinned in CI; a large
+consumer deck is an occasional release soak test, not the routine design fixture.
 
 The architecture and public boundaries are recorded in
 [`docs/architecture.md`](docs/architecture.md).

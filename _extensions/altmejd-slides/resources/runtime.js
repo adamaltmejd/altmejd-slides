@@ -41,7 +41,7 @@
     );
 
   const directNavigation = (slide) =>
-    Array.from(slide.children).find((child) => child.matches(".slide-nav, .slide-links"));
+    Array.from(slide.children).find((child) => child.matches(".slide-nav"));
 
   const setMeasuredHeight = (slide, property, element) => {
     if (element) {

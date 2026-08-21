@@ -508,8 +508,7 @@ $code-bg: $altmejd-code-bg !default;
 }
 
 // Compact, explicit navigation for back links and alternative specifications.
-.reveal .slide .slide-nav,
-.reveal .slide .slide-links {
+.reveal .slide .slide-nav {
   position: absolute;
   right: 0;
   bottom: 0;
@@ -528,8 +527,7 @@ $code-bg: $altmejd-code-bg !default;
   line-height: 1.15;
 }
 
-.reveal .slide .slide-nav > p,
-.reveal .slide .slide-links > p {
+.reveal .slide .slide-nav > p {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -540,14 +538,11 @@ $code-bg: $altmejd-code-bg !default;
 
 // Link groups commonly use middle-dot text separators. The flex gap is the
 // separator now, so collapse raw text nodes while retaining the links.
-.reveal .slide .slide-nav > p,
-.reveal .slide .slide-links > p {
+.reveal .slide .slide-nav > p {
   font-size: 0;
 }
 
-.reveal .slide :is(.slide-nav, .slide-links) a,
-.reveal .slide a.button,
-.reveal .slide .button > a {
+.reveal .slide .slide-nav a {
   display: inline-flex;
   align-items: center;
   column-gap: 0.16em;
@@ -569,44 +564,40 @@ $code-bg: $altmejd-code-bg !default;
     box-shadow 120ms ease;
 }
 
-.reveal .slide :is(.slide-nav, .slide-links) .primary > a,
-.reveal .slide :is(.slide-nav, .slide-links) a.primary {
+.reveal .slide .slide-nav .primary > a,
+.reveal .slide .slide-nav a.primary {
   color: var(--altmejd-background);
   background: var(--altmejd-primary);
   border-color: var(--altmejd-primary);
 }
 
-.reveal .slide :is(.slide-nav, .slide-links) :is(a.back, .back > a)::before {
+.reveal .slide .slide-nav :is(a.back, .back > a)::before {
   content: "←";
   margin-right: 0.32em;
   font-size: 1.05em;
   line-height: 1;
 }
 
-.reveal .slide :is(.slide-nav, .slide-links) a:hover {
+.reveal .slide .slide-nav a:hover {
   color: var(--altmejd-primary);
   background: color-mix(in srgb, var(--altmejd-primary) 7%, var(--altmejd-background));
   border-color: color-mix(in srgb, var(--altmejd-primary) 38%, var(--altmejd-border));
   box-shadow: none;
 }
 
-.reveal .slide :is(.slide-nav, .slide-links) .primary > a:hover,
-.reveal .slide :is(.slide-nav, .slide-links) a.primary:hover {
+.reveal .slide .slide-nav .primary > a:hover,
+.reveal .slide .slide-nav a.primary:hover {
   color: var(--altmejd-background);
   background: color-mix(in srgb, var(--altmejd-primary) 82%, var(--altmejd-foreground));
   border-color: transparent;
   box-shadow: 0 2px 5px color-mix(in srgb, var(--altmejd-foreground) 16%, transparent);
 }
 
-.reveal .slide :is(.slide-nav, .slide-links) a:active,
-.reveal .slide a.button:active,
-.reveal .slide .button > a:active {
+.reveal .slide .slide-nav a:active {
   transform: translateY(1px);
 }
 
-.reveal .slide :is(.slide-nav, .slide-links) a:focus-visible,
-.reveal .slide a.button:focus-visible,
-.reveal .slide .button > a:focus-visible {
+.reveal .slide .slide-nav a:focus-visible {
   outline: 3px solid var(--altmejd-accent);
   outline-offset: 2px;
 }
@@ -711,11 +702,6 @@ $code-bg: $altmejd-code-bg !default;
   flex: 0 0 auto;
 }
 
-.reveal .slide.layout-fill > .fill-region {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
 .reveal .slide.layout-fill > .figure-panels {
   flex: 1 1 auto;
   min-height: 0;
@@ -772,41 +758,6 @@ $code-bg: $altmejd-code-bg !default;
   object-fit: contain;
 }
 
-.reveal .slide .layout-two-column {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: $altmejd-gap;
-  min-height: 0;
-}
-
-.reveal .slide .layout-two-column.layout-30-70 {
-  grid-template-columns: minmax(0, 3fr) minmax(0, 7fr);
-}
-
-.reveal .slide .layout-two-column.layout-70-30 {
-  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
-}
-
-.reveal .slide .scroll-y {
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.reveal .slide .fit-media {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-}
-
-.reveal .slide .fit-media > :is(img, video, iframe, svg) {
-  width: auto;
-  max-width: 100%;
-  height: auto;
-  max-height: 100%;
-  object-fit: contain;
-}
-
 // `?handout=true` exposes speaker notes above the footer navigation row.
 html.altmejd-handout .reveal .slide.has-handout-notes {
   --altmejd-handout-note-reserve: calc(
@@ -853,9 +804,6 @@ html.altmejd-handout .reveal .slide > aside.notes > :last-child {
 }
 
 @media (max-width: 700px) {
-  .reveal .slide .layout-two-column,
-  .reveal .slide .layout-two-column.layout-30-70,
-  .reveal .slide .layout-two-column.layout-70-30,
   .reveal .slide .figure-panels {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -866,9 +814,7 @@ html.altmejd-handout .reveal .slide > aside.notes > :last-child {
 }
 
 @media print {
-  .reveal .slide :is(.slide-nav, .slide-links) a,
-  .reveal .slide a.button,
-  .reveal .slide .button > a {
+  .reveal .slide .slide-nav a {
     transform: none !important;
   }
 }

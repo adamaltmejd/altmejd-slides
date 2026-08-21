@@ -1,4 +1,8 @@
 .github
+.claude
+.quarto
+.ruff_cache
+.DS_Store
 docs
 examples
 node_modules

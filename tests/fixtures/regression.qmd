@@ -37,7 +37,7 @@ altmejd-slides:
 ![](../../examples/assets/estimate.svg){.r-stretch fig-alt="A landscape estimate fixture above a multi-line aside"}
 
 ::: {.slide-nav}
-[[Back: Compact navigation](#compact-navigation)]{.button}
+[Compact navigation](#compact-navigation){.back}
 [Alternative](#automatic-figure-panels)
 :::
 
@@ -87,8 +87,8 @@ FOR RESEARCH TALKS AND LECTURES
 
 ![](../../examples/assets/estimate.svg){.r-stretch fig-align="left" fig-alt="A deliberately left-aligned figure above a long navigation row"}
 
-::: {.slide-links}
-[[**Back:** Main result](#automatic-figure-panels)]{.button} ·
+::: {.slide-nav}
+[Main result](#automatic-figure-panels){.back} ·
 [Women](#near-cap-code-block) ·
 [Men](#long-code) ·
 [Age 30](#fragments) ·
@@ -137,7 +137,7 @@ $$
 \operatorname{ATE} = \mathbb{E}[Y_i(1) - Y_i(0)].
 $$
 
-[Back: $t=25$](#automatic-figure-panels){.button}
+[$t=25$](#automatic-figure-panels){.back}
 
 ## Long code
 

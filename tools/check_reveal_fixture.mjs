@@ -204,7 +204,7 @@ try {
     }));
 
     const navSlide = await show("compact-navigation");
-    const navLinks = Array.from(navSlide.querySelectorAll(".slide-links a"));
+    const navLinks = Array.from(navSlide.querySelectorAll(".slide-nav a"));
     const navFigure = navSlide.querySelector(":scope > img");
     const navSlideRect = rect(navSlide);
     const navFigureRect = rect(navFigure);
@@ -214,7 +214,7 @@ try {
     const asideSlide = await show("notes-and-aside");
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const aside = asideSlide.querySelector(":scope > .aside, :scope > aside:not(.notes)");
-    const asideNavigation = asideSlide.querySelector(":scope > .slide-nav, :scope > .slide-links");
+    const asideNavigation = asideSlide.querySelector(":scope > .slide-nav");
     const asideNavigationLinks = Array.from(asideNavigation.querySelectorAll("a"));
     const backLink = asideNavigationLinks[0];
     const stretched = asideSlide.querySelector(":scope > .r-stretch");
@@ -282,7 +282,7 @@ try {
       bundledKatex:
         mathElements.length >= 2 &&
         mathSizes.every((math) => math.width > 0 && math.height > 0) &&
-        globalThis.katex?.version === "0.18.1",
+        globalThis.katex?.version === "0.18.4",
       mathCount: mathElements.length,
       mathNavDocked:
         Math.abs(mathNavDockRect.right - mathSlideRect.right) < 2 &&
@@ -374,7 +374,7 @@ try {
     throw new Error(`figure panel layout failed: ${JSON.stringify(layout)}`);
   }
   if (
-    layout.navDisplay !== "inline-flex" ||
+    !["flex", "inline-flex"].includes(layout.navDisplay) ||
     layout.navRows < 2 ||
     !layout.focusVisible ||
     !layout.asideReserved ||
@@ -392,7 +392,7 @@ try {
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const notes = document.querySelector(".slides aside.notes");
     const aside = slide.querySelector(":scope > .aside, :scope > aside:not(.notes)");
-    const navigation = slide.querySelector(":scope > .slide-nav, :scope > .slide-links");
+    const navigation = slide.querySelector(":scope > .slide-nav");
     const stretched = slide.querySelector(":scope > .r-stretch");
     const noteRect = notes.getBoundingClientRect();
     const asideRect = aside.getBoundingClientRect();

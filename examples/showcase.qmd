@@ -323,8 +323,8 @@ BACKUP CHECKS AND IMPLEMENTATION DETAILS
 
 ![](assets/estimate.svg){.r-stretch fig-alt="Synthetic estimate for credits earned"}
 
-::: {.slide-links}
-[[**Back:** Descriptive pattern](#descriptive-pattern)]{.button} ·
+::: {.slide-nav}
+[Descriptive pattern](#descriptive-pattern){.back} ·
 [Main effect](#main-effect) ·
 [Dynamics](#effects-over-time) ·
 [Narrow bandwidth](#robustness-summary) ·

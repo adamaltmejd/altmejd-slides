@@ -14,11 +14,11 @@
     "pdf:examples": "python3 tools/render_revealjs_pdfs.py --site-dir _site --glob 'examples/*.html' --output-dir output/pdf"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.12",
+    "@biomejs/biome": "2.5.9",
     "decktape": "3.16.1",
-    "katex": "0.18.1"
+    "katex": "0.18.4"
   },
   "engines": {
-    "bun": ">=1.3.0"
+    "bun": ">=1.4.0"
   }
 }

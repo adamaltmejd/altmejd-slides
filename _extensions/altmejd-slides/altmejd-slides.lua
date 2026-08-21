@@ -176,12 +176,12 @@ local function read_metadata(meta)
   quarto.doc.add_html_dependency({
     name = "altmejd-slides-runtime",
     version = "0.2.0",
-    scripts = { "resources/handout.js" },
+    scripts = { "resources/runtime.js" },
   })
   if bundled_math then
     quarto.doc.add_html_dependency({
       name = "altmejd-slides-katex",
-      version = "0.18.1",
+      version = "0.18.4",
       scripts = { "resources/katex/katex.min.js" },
       stylesheets = { "resources/katex/katex.min.css" },
     })
@@ -329,8 +329,7 @@ local function is_navigation_inline(inline)
   elseif inline.t == "Str" then
     return inline.text:match("^[·|/]+$") ~= nil
   elseif inline.t == "Span" then
-    return (inline.classes:includes("button")
-        or inline.classes:includes("back")
+    return (inline.classes:includes("back")
         or inline.classes:includes("primary"))
       and contains_internal_link(pandoc.Plain(inline.content))
   end
@@ -349,70 +348,13 @@ local function is_navigation_paragraph(block)
   return true
 end
 
-local function mark_back_link(link)
-  if not link.classes:includes("back") then
-    link.classes:insert("back")
-  end
-  if link.attributes["aria-label"] == nil then
-    link.attributes["aria-label"] = "Back to " .. stringify(pandoc.Plain(link.content))
-  end
-end
-
-local function strip_back_prefix(link)
-  local first = link.content[1]
-  if first == nil then
-    return false
-  end
-
-  local label = nil
-  if first.t == "Str" then
-    label = first.text
-  elseif first.t == "Strong" or first.t == "Emph" or first.t == "Span" then
-    label = stringify(first.content)
-  end
-
-  if label == nil or label:lower() ~= "back:" then
-    return false
-  end
-
-  table.remove(link.content, 1)
-  while link.content[1] ~= nil
-    and (link.content[1].t == "Space" or link.content[1].t == "SoftBreak")
-  do
-    table.remove(link.content, 1)
-  end
-  mark_back_link(link)
-  return true
-end
-
-local function normalize_back_controls(block)
+local function label_back_controls(block)
   return pandoc.walk_block(block, {
     Link = function(link)
-      if link.classes:includes("button") or link.classes:includes("back") then
-        local stripped = strip_back_prefix(link)
-        if stripped or link.classes:includes("back") then
-          mark_back_link(link)
-        end
+      if link.classes:includes("back") and link.attributes["aria-label"] == nil then
+        link.attributes["aria-label"] = "Back to " .. stringify(pandoc.Plain(link.content))
       end
       return link
-    end,
-    Span = function(span)
-      if not span.classes:includes("button") and not span.classes:includes("back") then
-        return span
-      end
-      for _, inline in ipairs(span.content) do
-        if inline.t == "Link" then
-          local stripped = strip_back_prefix(inline)
-          if stripped and not span.classes:includes("back") then
-            span.classes:insert("back")
-          end
-          if stripped or span.classes:includes("back") then
-            mark_back_link(inline)
-          end
-          break
-        end
-      end
-      return span
     end,
   })
 end
@@ -422,7 +364,7 @@ local function enrich_research_layouts(blocks)
   local current_slide = nil
 
   for _, block in ipairs(blocks) do
-    block = normalize_back_controls(block)
+    block = label_back_controls(block)
     if block.t == "Header" and block.level <= 2 then
       current_slide = block.level == 2 and block or nil
     elseif current_slide ~= nil and is_figure_panels(block) then
