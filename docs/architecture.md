@@ -57,6 +57,20 @@ case of two Quarto columns that each contain a figure and enriches them with
 the extension's fill-height panel class. It does not replace Quarto's slide
 construction.
 
+The remaining slide primitives are pure theme contracts with no Lua
+involvement: `.statement`, `.closing-slide`, and `.full-bleed` are slide
+classes, `.stat-row`, `.table-note`, and `.emph` are content classes, and
+callouts restyle Quarto's native callout markup in place. Mode gating
+(`.handout-only`, `.live-only`) rides on the `altmejd-handout` root class the
+runtime already maintains. The intent behind these primitives and the palette
+is recorded in `docs/design.md`.
+
+The one generated asset is the QR code: a `{.qr}` link is encoded at render
+time by the vendored `qrencode.lua` (speedata/luaqrcode, BSD-3, license in
+the file header) and embedded as an SVG data URI with its four-module quiet
+zone inside the image. Like KaTeX and the typefaces, this keeps rendering
+offline; the encoder loads lazily, so decks without QR links never touch it.
+
 ## Browser behavior
 
 Browser code is source-controlled and external to the Lua filter. The runtime

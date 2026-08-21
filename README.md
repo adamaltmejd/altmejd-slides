@@ -120,6 +120,77 @@ and wraps when needed:
 :::
 ```
 
+A statement slide carries one takeaway. Add `.statement` to the slide heading
+and it becomes a quiet uppercase kicker above the payload — a short bold
+sentence, a `.stat-row`, or both. A `.stat-row` holds one to three
+number-plus-label pairs; each pair is one paragraph with the `.stat` span
+first, and wrapping the number in `**strong**` gives it the accent ink. The
+row also works at a smaller scale on ordinary slides:
+
+```markdown
+## The headline result {.statement}
+
+::: {.stat-row}
+[**+0.18**]{.stat} courses completed per term at the threshold
+:::
+```
+
+Quarto's native callouts are the semantic box family, restyled to the palette
+with their icons removed: `.callout-note` for definitions, `.callout-tip` for
+results, `.callout-important` for identifying assumptions, and
+`.callout-warning` or `.callout-caution` for caveats. Callouts keep a solid
+light surface on `.dark-bg` slides.
+
+Figure build-ups use Reveal's `.r-stack` with `.fragment` layers. Export
+layers that share the same base image so each fragment reads as adding to the
+plot; both PDF variants keep only the final state:
+
+```markdown
+::: {.r-stack}
+![](points.svg)
+
+![](points-plus-fit.svg){.fragment}
+:::
+```
+
+A full-bleed slide puts one image behind the whole canvas. The heading and an
+optional caption paragraph sit on fixed scrim chips, the attribution becomes a
+bottom-right credit chip, and the footer and slide number yield:
+
+```markdown
+## The space itself {.full-bleed background-image="scene.jpg" background-size="cover"}
+
+One caption line.
+
+::: {.attribution}
+Image credit
+:::
+```
+
+A closing slide bookends the cover on the divider surface. `.closing-slide`
+reuses the title rule, enlarges the heading, and anchors the contact
+paragraphs at the bottom above the same hairline the author grid uses. A
+`{.qr}` link renders as a scannable QR code docked top-right — generated at
+render time by a vendored offline encoder, with the link text as alt text:
+
+```markdown
+## Thank you {.closing-slide}
+
+name\@university.edu · [example.org](https://example.org)
+
+[QR code for the paper](https://example.org/paper){.qr}
+```
+
+Content can be gated to one delivery mode: `.handout-only` blocks appear only
+under `?handout=true` and in the handout PDF, while `.live-only` blocks
+disappear there. Tables set tabular figures for aligned columns; a
+`.table-note` div under a table renders a centered source note, and an
+`[0.18]{.emph}` span puts a quiet accent chip on the key value in a table or
+sentence.
+
+The palette's usage rules — which colors mean emphasis, structure, and data —
+are recorded in [`docs/design.md`](docs/design.md).
+
 Any content immediately below a level-one section heading becomes its agenda
 kicker. For explicit markup, wrap the content in `.section-kicker`. Visible
 direct-child asides reserve their measured height in live slides and handouts;
