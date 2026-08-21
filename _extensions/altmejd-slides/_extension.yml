@@ -1,6 +1,6 @@
 title: Altmejd Slides
 author: Adam Altmejd Selder
-version: 0.3.0
+version: 0.4.0
 quarto-required: ">=1.10.0"
 contributes:
   formats:
