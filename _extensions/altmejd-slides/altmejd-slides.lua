@@ -205,14 +205,14 @@ local function read_metadata(meta)
 
   quarto.doc.add_html_dependency({
     name = "altmejd-slides-runtime",
-    version = "0.3.0",
+    version = "0.4.0",
     scripts = { "resources/runtime.js" },
   })
   -- Bundled OFL typefaces, vendored like KaTeX so rendering and PDF capture
   -- never depend on host-installed fonts.
   quarto.doc.add_html_dependency({
     name = "altmejd-slides-fonts",
-    version = "0.3.0",
+    version = "0.4.0",
     stylesheets = { "resources/fonts/fonts.css" },
   })
   if bundled_math then
@@ -224,7 +224,7 @@ local function read_metadata(meta)
     })
     quarto.doc.add_html_dependency({
       name = "altmejd-slides-math",
-      version = "0.3.0",
+      version = "0.4.0",
       scripts = { "resources/math.js" },
     })
   end
@@ -247,6 +247,92 @@ local function render_math(math)
   return pandoc.RawInline(
     "html",
     string.format('<span class="%s">%s</span>', classes, escape_html(math.text))
+  )
+end
+
+-- `[alt text](url){.qr}` renders as a generated QR code image. The encoder is
+-- the vendored speedata luaqrcode (BSD-3), so decks stay offline and
+-- deterministic; the link text becomes the image's alt text.
+local qrencode = nil
+
+local function load_qrencode()
+  if qrencode == nil then
+    local source = debug.getinfo(1, "S").source:sub(2)
+    qrencode = dofile(pandoc.path.join({ pandoc.path.directory(source), "qrencode.lua" }))
+  end
+  return qrencode
+end
+
+local function qr_svg(matrix)
+  local size = #matrix
+  -- The QR specification requires a four-module quiet zone, so it ships
+  -- inside the SVG rather than depending on CSS padding ratios.
+  local quiet = 4
+  local total = size + 2 * quiet
+  local parts = pandoc.List()
+  parts:insert(string.format(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d">',
+    total,
+    total
+  ))
+  parts:insert(string.format('<rect width="%d" height="%d" fill="#fff"/>', total, total))
+  parts:insert('<path fill="#000" d="')
+  for y = 1, size do
+    local x = 1
+    while x <= size do
+      if matrix[x][y] > 0 then
+        local run = x
+        while run <= size and matrix[run][y] > 0 do
+          run = run + 1
+        end
+        parts:insert(string.format(
+          "M%d %dh%dv1h-%dz",
+          x - 1 + quiet,
+          y - 1 + quiet,
+          run - x,
+          run - x
+        ))
+        x = run
+      else
+        x = x + 1
+      end
+    end
+  end
+  parts:insert('"/></svg>')
+  return table.concat(parts)
+end
+
+local function render_qr_link(link)
+  if not link.classes:includes("qr") then
+    return nil
+  end
+  local ok, matrix_or_message = pcall(function()
+    local success, result = load_qrencode().qrcode(link.target, 2)
+    if not success then
+      error(result, 0)
+    end
+    return result
+  end)
+  if not ok then
+    quarto.log.warning(string.format(
+      "could not encode a QR code for %s: %s",
+      link.target,
+      tostring(matrix_or_message)
+    ))
+    return nil
+  end
+
+  local alt = stringify(pandoc.Plain(link.content))
+  if alt == "" then
+    alt = "QR code linking to " .. link.target
+  end
+  return pandoc.RawInline(
+    "html",
+    string.format(
+      '<img class="qr nostretch" alt="%s" src="data:image/svg+xml;base64,%s" />',
+      escape_html(alt):gsub('"', "&quot;"),
+      quarto.base64.encode(qr_svg(matrix_or_message))
+    )
   )
 end
 
@@ -482,7 +568,7 @@ end
 if quarto.doc.is_format("revealjs") then
   return {
     { Meta = read_metadata },
-    { Math = render_math },
+    { Math = render_math, Link = render_qr_link },
     { Header = collect_sections },
     { Blocks = build_agendas },
   }

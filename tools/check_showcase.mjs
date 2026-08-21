@@ -140,6 +140,34 @@ async function auditShowcase(page, url, mode) {
         noteFailures.push(slide.id || "(untitled)");
       }
 
+      // Flowing content must stay clear of the spine attribution's painted
+      // text. The element box stretches the full slide height so its line can
+      // center, so the probe uses the text's client rects, not the box;
+      // full-bleed slides restyle the attribution as a corner chip instead.
+      const attribution = Array.from(slide.children).find(
+        (child) => child.matches(".attribution") && visible(child),
+      );
+      if (attribution && !slide.classList.contains("full-bleed")) {
+        const textRange = document.createRange();
+        // Select inside the paragraph: its block box also stretches the full
+        // slide height, and only the glyph fragments mark real ink.
+        textRange.selectNodeContents(attribution.querySelector("p") ?? attribution);
+        const attributionRects = Array.from(textRange.getClientRects());
+        for (const child of Array.from(slide.children)) {
+          if (
+            child === attribution ||
+            !visible(child) ||
+            getComputedStyle(child).position === "absolute"
+          ) {
+            continue;
+          }
+          const childRect = rect(child);
+          if (attributionRects.some((textRect) => intersects(childRect, textRect))) {
+            collisions.push(`${slide.id || "(untitled)"}:attribution`);
+          }
+        }
+      }
+
       if (slide.classList.contains("agenda-slide")) {
         const agenda = slide.querySelector(":scope > .agenda");
         const kicker = slide.querySelector(":scope > .section-kicker");
@@ -282,14 +310,14 @@ function assertAudit(name, audit, expectedHandout) {
     scrollView: audit.scrollView,
     titleFits: !audit.titleFits,
     wrongFeatureCounts:
-      audit.slides !== 28 ||
+      audit.slides !== 35 ||
       audit.agendas !== 5 ||
       audit.authorCount !== 4 ||
-      audit.images < 14 ||
+      audit.images < 16 ||
       audit.internalLinks < 22 ||
-      audit.notes < 7 ||
+      audit.notes < 8 ||
       audit.footnotes !== 1 ||
-      audit.math < 8 ||
+      audit.math < 10 ||
       audit.navigationRows < 1,
   };
   const activeFailures = Object.fromEntries(

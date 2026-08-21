@@ -53,6 +53,10 @@ $altmejd-heading-line-height: 1.2 !default;
 $altmejd-heading-rule-pad: 0.28 !default;
 $altmejd-aside-max-height: 26% !default;
 $altmejd-handout-note-max-height: 32% !default;
+// Right gutter reserved for the spine attribution. A pixel value keeps the
+// slide padding and the heading's compensating margin identical, which em
+// units cannot (the heading resolves em against its own larger font).
+$altmejd-attribution-gutter: 36px !default;
 
 $code-block-bg: $altmejd-code-bg !default;
 $code-block-border-color: $altmejd-border !default;
@@ -86,6 +90,9 @@ $code-bg: $altmejd-code-bg !default;
   --altmejd-heading-line-end: var(--altmejd-secondary);
   --altmejd-agenda-background: var(--altmejd-primary);
   --altmejd-agenda-foreground: var(--altmejd-secondary);
+  // Overlay chip behind text on full-bleed photo slides. Fixed deep neutral
+  // rather than a palette mix: it must hold on any photograph.
+  --altmejd-scrim: rgba(11, 20, 36, 0.66);
 }
 
 .reveal-viewport {
@@ -155,8 +162,27 @@ $code-bg: $altmejd-code-bg !default;
 
 .reveal .slide a {
   color: var(--altmejd-primary);
+  // Reveal's base theme strips underlines, which leaves prose links
+  // distinguishable by color alone (WCAG 1.4.1). Chip, agenda, and
+  // attribution links opt back out below and in their own rules.
+  text-decoration-line: underline;
   text-decoration-thickness: 0.075em;
   text-underline-offset: 0.14em;
+}
+
+// Reveal's default lists carry a 1em left margin with outside markers, so
+// numbers and bullets float between the prose margin and their own text.
+// Zeroing the margin and sizing the padding puts markers flush with prose.
+// Ordered lists need more room: an outside "1." marker box is about 1.4em
+// wide, and any shortfall hangs left of the list into the gutter.
+.reveal .slide ul {
+  margin-left: 0;
+  padding-left: 1.15em;
+}
+
+.reveal .slide ol {
+  margin-left: 0;
+  padding-left: 1.5em;
 }
 
 .reveal .slide li {
@@ -165,6 +191,12 @@ $code-bg: $altmejd-code-bg !default;
 
 .reveal .slide li::marker {
   color: var(--altmejd-info);
+}
+
+// Second-level bullets read as consequences of their parent, so they take a
+// quiet arrow instead of a filled shape.
+.reveal .slide ul ul {
+  list-style-type: "→  ";
 }
 
 .reveal .slide blockquote {
@@ -178,6 +210,83 @@ $code-bg: $altmejd-code-bg !default;
   box-shadow: none;
 }
 
+// Quarto's native callouts, restyled as the deck's semantic box family:
+// note = definition or detail, tip = result, important = assumption or key
+// claim, warning/caution = caveat. These rules compile after Quarto's callout
+// layer in the same stylesheet, so equal-or-higher specificity wins.
+.reveal .slide div.callout {
+  // The note/definition ink is the slate muted, not info: the info mauve sits
+  // too close to the primary burgundy for the two titles to read as distinct.
+  --altmejd-callout-ink: var(--altmejd-muted);
+  margin: 0.55em 0;
+  overflow: hidden;
+  font-size: 0.74em;
+  background: color-mix(in srgb, var(--altmejd-surface) 72%, transparent);
+  border: none;
+  border-left: $altmejd-rule-thickness solid var(--altmejd-callout-ink);
+  border-radius: 0 $altmejd-radius $altmejd-radius 0;
+}
+
+.reveal .slide .callout.callout-tip {
+  // The pale sage needs foreground ink to hold contrast as a rule and title.
+  --altmejd-callout-ink: color-mix(in srgb, var(--altmejd-success) 42%, var(--altmejd-foreground));
+}
+
+.reveal .slide .callout.callout-important {
+  --altmejd-callout-ink: var(--altmejd-primary);
+}
+
+.reveal .slide .callout:is(.callout-warning, .callout-caution) {
+  --altmejd-callout-ink: color-mix(in srgb, var(--altmejd-accent) 70%, var(--altmejd-foreground));
+}
+
+.reveal .slide .callout .callout-icon-container {
+  display: none;
+}
+
+// The `.slides` hop and `div` qualifiers outrank Quarto's per-type
+// `.reveal div.callout.<type>.callout-style-default .callout-title`
+// background rules and its `div.callout-title p` color rule.
+.reveal .slides .slide div.callout div.callout-title {
+  align-items: baseline;
+  padding: 0.5em 0.9em 0;
+  color: var(--altmejd-callout-ink);
+  background: none;
+}
+
+.reveal .slide div.callout div.callout-title p {
+  margin: 0;
+  color: inherit;
+  font-size: 0.72em;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.reveal .slide div.callout div.callout-title strong {
+  color: inherit;
+  font-weight: inherit;
+}
+
+.reveal .slide .callout .callout-content {
+  padding: 0 0.9em;
+}
+
+.reveal .slide .callout .callout-content p {
+  margin: 0.3em 0 0.55em;
+}
+
+// Callouts keep their own light surface on author-dark slides, matching the
+// navigation chips, so the translucent mix becomes a solid fill there.
+.reveal .slides section.dark-bg .callout {
+  color: var(--altmejd-foreground);
+  background: var(--altmejd-surface);
+}
+
+.reveal .slides section.dark-bg .callout a {
+  color: var(--altmejd-primary);
+}
+
 .reveal .slide code {
   font-family: $font-family-monospace;
   font-variant-ligatures: none;
@@ -188,6 +297,14 @@ $code-bg: $altmejd-code-bg !default;
   color: inherit;
   background: var(--altmejd-code-background);
   border-radius: 3px;
+}
+
+// On dark surfaces the tinted light chip would carry light inherited text,
+// so inline code inverts to a translucent white chip instead.
+.reveal .slides section.closing-slide :not(pre) > code,
+.reveal .slides section.full-bleed :not(pre) > code,
+.reveal .slides section.dark-bg :not(pre) > code {
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .reveal .slide pre {
@@ -256,6 +373,7 @@ $code-bg: $altmejd-code-bg !default;
   // Tables are centered objects in this format, like standalone figures.
   margin-inline: auto;
   font-size: 0.82em;
+  font-variant-numeric: tabular-nums;
 }
 
 .reveal .slide table th,
@@ -270,6 +388,32 @@ $code-bg: $altmejd-code-bg !default;
     var(--altmejd-primary) 35%,
     var(--altmejd-background)
   );
+}
+
+// A quiet source note tucked under a centered table.
+.reveal .slide .table-note {
+  width: fit-content;
+  max-width: min(100%, 30em);
+  margin: -0.25em auto 0.6em;
+  color: var(--altmejd-muted);
+  font-size: 0.5em;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.reveal .slide .table-note p {
+  margin: 0;
+}
+
+// The "circle the coefficient" move: an accent chip on the key value in a
+// table or sentence. The 65% ink mix holds 4.5:1 on the tinted chip.
+.reveal .slide .emph {
+  padding: 0.02em 0.26em;
+  color: color-mix(in srgb, var(--altmejd-accent) 65%, var(--altmejd-foreground));
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--altmejd-accent) 14%, transparent);
+  border-radius: 3px;
 }
 
 .reveal .slide img,
@@ -492,6 +636,239 @@ $code-bg: $altmejd-code-bg !default;
   color: var(--altmejd-background);
 }
 
+// A statement slide carries one takeaway: a sentence or a `.stat-row`. The
+// heading becomes a quiet kicker and the rule is suppressed so the statement
+// itself is the loudest element on the slide.
+.reveal .slides section.statement {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 100%;
+}
+
+.reveal .slides section.statement > h2 {
+  margin: 0 0 1.4em;
+  padding-bottom: 0;
+  color: var(--altmejd-primary);
+  font-size: 0.58em;
+  font-weight: 650;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.reveal .slides section.statement > h2::after {
+  content: none;
+}
+
+.reveal .slides section.statement > p {
+  max-width: 15em;
+  margin: 0 0 0.4em;
+  font-size: 1.5em;
+  font-weight: 680;
+  line-height: 1.22;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+// One to three number-plus-label pairs. Each stat is one paragraph: the
+// `.stat` span first, then the label text. The paragraph is a flex column, so
+// the trailing text wraps into an anonymous item below the number.
+.reveal .slide .stat-row {
+  display: flex;
+  gap: 1.8em;
+  align-items: flex-start;
+  margin: 0.45em 0;
+}
+
+.reveal .slide .stat-row > p {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22em;
+  min-width: 0;
+  margin: 0;
+  color: var(--altmejd-muted);
+  font-size: 0.62em;
+  font-weight: 560;
+  line-height: 1.25;
+}
+
+// No tabular-nums here: a lone display number gains nothing from column
+// alignment, and the tabular-width period reads as a gap at this size.
+.reveal .slide .stat-row .stat {
+  color: var(--altmejd-foreground);
+  font-size: 2.6em;
+  font-weight: 740;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+// On a statement slide the row is the payload, so it renders larger. Wrap a
+// number in `**strong**` inside `.stat` when it should take the accent ink.
+.reveal .slides section.statement .stat-row {
+  gap: 2.2em;
+}
+
+.reveal .slides section.statement .stat-row > p {
+  font-size: 0.68em;
+}
+
+.reveal .slides section.statement .stat-row .stat {
+  font-size: 3.1em;
+}
+
+// The closing slide bookends the cover on the divider surface: the derived
+// gradient rule on top, a large thank-you line, and a contact strip anchored
+// at the bottom above the same hairline the author grid uses.
+.reveal .slides section.closing-slide {
+  position: relative;
+  display: flex !important;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: 100%;
+  padding: 4.2em 0 2.25em;
+  color: var(--altmejd-agenda-foreground);
+  background: var(--altmejd-agenda-background);
+}
+
+.reveal:not(.overview) .slides section.closing-slide {
+  box-shadow: 0 0 0 100vmax var(--altmejd-agenda-background);
+}
+
+.reveal .slides section.closing-slide::before {
+  content: "";
+  position: absolute;
+  top: calc(
+    #{($altmejd-heading-scale * $altmejd-heading-line-height) +
+      ($altmejd-heading-rule-pad * $altmejd-heading-scale)}em -
+      #{$altmejd-rule-thickness}
+  );
+  right: 0;
+  left: 0;
+  height: $altmejd-rule-thickness;
+  background: linear-gradient(
+    90deg,
+    var(--altmejd-heading-line-start),
+    var(--altmejd-heading-line-end)
+  );
+}
+
+.reveal .slides section.closing-slide > h2 {
+  max-width: 15ch;
+  margin: 0.22em 0 auto;
+  padding-bottom: 0;
+  color: #fff;
+  font-size: 1.9em;
+  font-weight: 740;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+}
+
+.reveal .slides section.closing-slide > h2::after {
+  content: none;
+}
+
+.reveal .slides section.closing-slide > p {
+  margin: 0.3em 0 0;
+  color: color-mix(
+    in srgb,
+    var(--altmejd-agenda-foreground) 85%,
+    var(--altmejd-agenda-background)
+  );
+  font-size: 0.66em;
+}
+
+.reveal .slides section.closing-slide > p:first-of-type {
+  width: 100%;
+  margin-top: 0;
+  padding-top: 0.72em;
+  border-top: 1px solid color-mix(
+    in srgb,
+    var(--altmejd-agenda-foreground) 35%,
+    transparent
+  );
+}
+
+.reveal .slides section.closing-slide a {
+  color: #fff;
+}
+
+// An optional uncaptioned `.qr .nostretch` image sits top-right across from
+// the heading. The image itself is positioned, because Quarto may unwrap a
+// lone image into a direct section child; a surviving wrapper paragraph is
+// neutralized so it can never become the contact strip.
+.reveal .slides section.closing-slide img.qr {
+  position: absolute;
+  top: calc(
+    #{($altmejd-heading-scale * $altmejd-heading-line-height) +
+      ($altmejd-heading-rule-pad * $altmejd-heading-scale)}em + 0.9em
+  );
+  right: 0;
+  width: 7.4em;
+  height: auto;
+  // A white tile keeps the code's quiet zone on the divider surface.
+  padding: 0.3em;
+  background: #fff;
+  border: none;
+  border-radius: $altmejd-radius;
+}
+
+.reveal .slides section.closing-slide > p:has(> img.qr) {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+// A full-bleed slide puts its `background-image` first. Text sits on scrim
+// chips that stay legible on any photograph, and the corner chrome yields.
+.reveal .slides section.full-bleed {
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  height: 100%;
+  padding-bottom: 1.1em;
+}
+
+.reveal .slides section.full-bleed > h2 {
+  width: fit-content;
+  max-width: 80%;
+  margin: 0;
+  padding: 0.28em 0.55em;
+  color: #fff;
+  background: var(--altmejd-scrim);
+  border-radius: $altmejd-radius;
+}
+
+.reveal .slides section.full-bleed > h2::after {
+  content: none;
+}
+
+.reveal .slides section.full-bleed > p {
+  width: fit-content;
+  max-width: 70%;
+  margin: 0.35em 0 0;
+  padding: 0.32em 0.7em;
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 0.62em;
+  background: var(--altmejd-scrim);
+  border-radius: $altmejd-radius;
+}
+
+.reveal .slides section.full-bleed > .attribution {
+  top: auto;
+  right: 0;
+  bottom: 0;
+  max-height: none;
+  padding: 0.45em 0.8em;
+  color: rgba(255, 255, 255, 0.85);
+  background: var(--altmejd-scrim);
+  border-radius: $altmejd-radius;
+  transform: none;
+  writing-mode: horizontal-tb;
+}
+
 // Section agendas are generated by default and can be configured in YAML.
 .reveal .slides section.agenda-slide {
   display: flex !important;
@@ -507,17 +884,29 @@ $code-bg: $altmejd-code-bg !default;
   box-shadow: 0 0 0 100vmax var(--altmejd-agenda-background);
 }
 
-// The footer belongs to content slides, not the cover or section dividers.
-// Reveal maintains `.present`, so this also works during normal-mode PDF capture.
+// The footer belongs to content slides, not the cover, section dividers,
+// closing slides, or full-bleed photographs. Reveal maintains `.present`, so
+// this also works during normal-mode PDF capture.
 .reveal:has(.slides #title-slide.present) .footer,
-.reveal:has(.slides section.agenda-slide.present) .footer {
+.reveal:has(.slides section.agenda-slide.present) .footer,
+.reveal:has(.slides section.closing-slide.present) .footer,
+.reveal:has(.slides section.full-bleed.present) .footer {
   // Quarto loads its footer support stylesheet after the compiled theme.
   display: none !important;
 }
 
+// Reveal only derives `has-dark-background` from background colors, never
+// from photographs, so the slide number cannot adapt on a full-bleed slide.
+// Quarto's runtime sets an inline `display: block` on this element.
+.reveal:has(.slides section.full-bleed.present) .slide-number {
+  display: none !important;
+}
+
 // Recolor the remaining chrome while a divider covers the viewport, so the
-// slide number and progress bar stay legible on the agenda surface.
-.reveal:has(.slides section.agenda-slide.present) .slide-number {
+// slide number and progress bar stay legible on the agenda surface. The
+// closing slide shares that surface.
+.reveal:has(.slides section.agenda-slide.present) .slide-number,
+.reveal:has(.slides section.closing-slide.present) .slide-number {
   color: color-mix(
     in srgb,
     var(--altmejd-agenda-foreground) 80%,
@@ -525,7 +914,8 @@ $code-bg: $altmejd-code-bg !default;
   );
 }
 
-.reveal:has(.slides section.agenda-slide.present) .progress {
+.reveal:has(.slides section.agenda-slide.present) .progress,
+.reveal:has(.slides section.closing-slide.present) .progress {
   background: color-mix(
     in srgb,
     var(--altmejd-agenda-foreground) 18%,
@@ -533,7 +923,8 @@ $code-bg: $altmejd-code-bg !default;
   );
 }
 
-.reveal:has(.slides section.agenda-slide.present) .progress span {
+.reveal:has(.slides section.agenda-slide.present) .progress span,
+.reveal:has(.slides section.closing-slide.present) .progress span {
   background: var(--altmejd-agenda-foreground);
 }
 
@@ -562,7 +953,8 @@ $code-bg: $altmejd-code-bg !default;
 }
 
 .reveal .section-kicker {
-  max-width: 34em;
+  // Kickers are one-line qualifiers; the cap only guards absurd lengths.
+  max-width: 52em;
   margin-bottom: 0.85em;
   color: color-mix(in srgb, var(--altmejd-agenda-foreground) 82%, transparent);
   font-size: 0.58em;
@@ -589,6 +981,9 @@ $code-bg: $altmejd-code-bg !default;
 
 .reveal .agenda a {
   color: inherit;
+  // Agenda items form a menu on the divider surface; position is the
+  // affordance, so clickable agendas stay underline-free.
+  text-decoration: none;
 }
 
 .reveal .agenda > :is(div, ul, ol),
@@ -707,15 +1102,31 @@ $code-bg: $altmejd-code-bg !default;
   outline-offset: 2px;
 }
 
+// A slide with a spine attribution reserves a right gutter so flowing
+// content never runs under the rotated line. Absolutely positioned boxes
+// (asides, navigation, the spine itself) keep the full slide width, and the
+// heading pulls back out so its rule still spans edge to edge.
+.reveal .slide:has(> .attribution):not(.full-bleed) {
+  box-sizing: border-box;
+  padding-right: $altmejd-attribution-gutter;
+}
+
+.reveal .slide:has(> .attribution):not(.full-bleed) > h2 {
+  margin-right: -$altmejd-attribution-gutter;
+}
+
 // A top-level attribution remains part of its slide, so Reveal plugins such as
 // slide-remote continue to see the conventional `.reveal > .slides` tree.
 .reveal .slide > .attribution {
   position: absolute;
-  top: 50%;
+  // Stretch to the full slide height: anchoring at top 50% would halve the
+  // shrink-to-fit space and silently wrap the spine onto a second vertical
+  // line. text-align centers along the vertical inline axis instead, and a
+  // wrapped line would read in the wrong order after the rotation, so the
+  // attribution stays a single clipped line.
+  top: 0;
   right: 0;
-  // A wrapped vertical line would read in the wrong order after the
-  // rotation, so the attribution stays a single clipped line.
-  max-height: 100%;
+  bottom: 0;
   margin: 0;
   overflow: hidden;
   color: var(--altmejd-muted);
@@ -723,18 +1134,29 @@ $code-bg: $altmejd-code-bg !default;
   line-height: 1;
   text-align: center;
   white-space: nowrap;
-  transform: translateY(-50%) rotate(180deg);
+  transform: rotate(180deg);
   transform-origin: center;
   writing-mode: vertical-lr;
 }
 
 .reveal .slide > .attribution p {
   margin: 0;
+  // Quarto's paragraph line-height would re-inflate the spine; in vertical
+  // writing mode a line-height mismatch also shunts inline spans sideways.
+  line-height: inherit;
 }
 
 .reveal .slide > .attribution a {
   color: inherit;
   text-decoration: none;
+}
+
+// Inline code inside the spine stays plain mono text: the chip treatment
+// would inflate the single line box past its gutter.
+.reveal .slide > .attribution code {
+  padding: 0;
+  line-height: inherit;
+  background: none;
 }
 
 // Visible asides use the same bottom-box contract in presentations and
@@ -748,7 +1170,7 @@ $code-bg: $altmejd-code-bg !default;
   z-index: 10;
   box-sizing: border-box;
   max-height: $altmejd-aside-max-height;
-  padding: 0.5em 0.65em;
+  padding: 0.45em 0.65em;
   overflow: hidden;
   color: var(--altmejd-muted);
   font-size: 0.5em;
@@ -775,6 +1197,16 @@ $code-bg: $altmejd-code-bg !default;
   margin-bottom: 0;
 }
 
+// Quarto wraps aside content in an inner div, so the child rules above never
+// reach the paragraphs; their default margins would pad the compact box.
+.reveal .slide > :is(.aside, aside:not(.notes)) p {
+  margin: 0 0 0.3em;
+}
+
+.reveal .slide > :is(.aside, aside:not(.notes)) p:last-child {
+  margin-bottom: 0;
+}
+
 // The runtime measures bottom-edge components. Their reserve variables compose,
 // so content, navigation, asides, and handout notes never occupy the same space.
 .reveal .slide.has-altmejd-aside {
@@ -798,6 +1230,12 @@ $code-bg: $altmejd-code-bg !default;
 .reveal .slide > :is(.r-stretch, .stretch) {
   max-height: var(--altmejd-stretch-max-height, none) !important;
   object-fit: contain;
+}
+
+// Figure build-ups: Reveal's `.r-stack` stacks its direct children, but
+// Pandoc wraps each image in a paragraph whose margins would offset layers.
+.reveal .slide .r-stack > p {
+  margin: 0;
 }
 
 // Small, opt-in layout API. These classes never change the global Reveal
@@ -879,6 +1317,17 @@ $code-bg: $altmejd-code-bg !default;
   object-fit: contain;
 }
 
+// Content gated to one delivery mode. `.handout-only` appears only in
+// `?handout=true` (and therefore the handout PDF); `.live-only` disappears
+// there. Both gate by hiding, so no display value ever needs restoring.
+html:not(.altmejd-handout) .reveal .handout-only {
+  display: none !important;
+}
+
+html.altmejd-handout .reveal .live-only {
+  display: none !important;
+}
+
 // `?handout=true` exposes speaker notes above the footer navigation row.
 html.altmejd-handout .reveal .slide.has-handout-notes {
   --altmejd-handout-note-reserve: calc(
@@ -901,7 +1350,7 @@ html.altmejd-handout .reveal .slide > aside.notes {
   display: block !important;
   box-sizing: border-box;
   max-height: $altmejd-handout-note-max-height;
-  padding: 0.5em 0.65em;
+  padding: 0.45em 0.65em;
   overflow: hidden;
   color: var(--altmejd-muted);
   font-size: 0.5em;
@@ -921,6 +1370,14 @@ html.altmejd-handout .reveal .slide > aside.notes > :first-child {
 }
 
 html.altmejd-handout .reveal .slide > aside.notes > :last-child {
+  margin-bottom: 0;
+}
+
+html.altmejd-handout .reveal .slide > aside.notes p {
+  margin: 0 0 0.3em;
+}
+
+html.altmejd-handout .reveal .slide > aside.notes p:last-child {
   margin-bottom: 0;
 }
 

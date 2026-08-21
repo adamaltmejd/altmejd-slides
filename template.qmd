@@ -62,3 +62,9 @@ handout PDF.
 ## Takeaway
 
 Return to the opening question and answer it directly.
+
+## Thank you {.closing-slide}
+
+adam\@altmejd.se · [adamaltmejd.se](https://adamaltmejd.se)
+
+[QR code linking to adamaltmejd.se](https://adamaltmejd.se){.qr}

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 520" role="img" aria-labelledby="title desc">
+  <title id="title">Synthetic binned outcomes with local fits</title>
+  <desc id="desc">The same binned outcomes with separate local linear fits on either side of the threshold and the estimated jump.</desc>
+  <rect width="960" height="520" rx="16" fill="#f8fafc"/>
+  <g stroke="#e2e8f0" stroke-width="2">
+    <line x1="106" y1="92" x2="886" y2="92"/><line x1="106" y1="190" x2="886" y2="190"/>
+    <line x1="106" y1="288" x2="886" y2="288"/><line x1="106" y1="386" x2="886" y2="386"/>
+  </g>
+  <line x1="106" y1="414" x2="886" y2="414" stroke="#64748b" stroke-width="3"/>
+  <line x1="106" y1="62" x2="106" y2="414" stroke="#64748b" stroke-width="3"/>
+  <line x1="496" y1="58" x2="496" y2="414" stroke="#94a3b8" stroke-width="4" stroke-dasharray="10 10"/>
+  <g fill="#e26d5c" stroke="#0f172a" stroke-width="2" opacity="0.88">
+    <circle cx="148" cy="352" r="8"/><circle cx="194" cy="338" r="8"/><circle cx="240" cy="341" r="8"/><circle cx="286" cy="322" r="8"/>
+    <circle cx="332" cy="318" r="8"/><circle cx="378" cy="300" r="8"/><circle cx="424" cy="297" r="8"/><circle cx="470" cy="285" r="8"/>
+    <circle cx="522" cy="222" r="8"/><circle cx="568" cy="212" r="8"/><circle cx="614" cy="203" r="8"/><circle cx="660" cy="189" r="8"/>
+    <circle cx="706" cy="184" r="8"/><circle cx="752" cy="170" r="8"/><circle cx="798" cy="158" r="8"/><circle cx="844" cy="151" r="8"/>
+  </g>
+  <line x1="132" y1="358" x2="482" y2="280" stroke="#644043" stroke-width="8" stroke-linecap="round"/>
+  <line x1="510" y1="224" x2="858" y2="146" stroke="#644043" stroke-width="8" stroke-linecap="round"/>
+  <text x="524" y="286" fill="#644043" font-family="system-ui, sans-serif" font-size="28" font-weight="700">+0.18</text>
+  <g fill="#0f172a" font-family="system-ui, sans-serif" font-size="25">
+    <text x="91" y="452">48</text><text x="480" y="452">60</text><text x="852" y="452">72</text>
+    <text x="358" y="490" font-size="27">Priority score</text>
+  </g>
+  <text x="32" y="300" transform="rotate(-90 32 300)" fill="#0f172a" font-family="system-ui, sans-serif" font-size="27">Courses completed</text>
+</svg>

@@ -413,6 +413,217 @@ try {
     throw new Error(`navigation or live aside contract failed: ${JSON.stringify(layout)}`);
   }
 
+  // The v0.4 primitives run in their own evaluate call with eager captures,
+  // because these slides share the configured section's vertical stack and
+  // only the active stack child keeps a layout.
+  const primitives = await page.evaluate(async () => {
+    const show = async (id) => {
+      const slide = document.getElementById(id);
+      if (!slide) {
+        throw new Error(`fixture slide is missing: ${id}`);
+      }
+      const { h, v } = globalThis.Reveal.getIndices(slide);
+      globalThis.Reveal.slide(h, v);
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      return slide;
+    };
+    const rect = (element) => element.getBoundingClientRect();
+    const footer = document.querySelector(".footer");
+    const slideNumber = document.querySelector(".slide-number");
+
+    const statement = await show("statement-stress");
+    const statementParagraph = statement.querySelector(":scope > p");
+    const statementStats = Array.from(statement.querySelectorAll(".stat-row > p"));
+    const statementProbe = {
+      centered: getComputedStyle(statement).justifyContent === "center",
+      fits: statement.scrollHeight <= statement.clientHeight + 2,
+      kickerRuleGone: getComputedStyle(statement.querySelector("h2"), "::after").content === "none",
+      sentenceSize: Number.parseFloat(getComputedStyle(statementParagraph).fontSize),
+      statColumns:
+        statementStats.length === 3 &&
+        statementStats.every((stat) => getComputedStyle(stat).flexDirection === "column"),
+      statSize: Number.parseFloat(
+        getComputedStyle(statement.querySelector(".stat-row .stat")).fontSize,
+      ),
+    };
+
+    const calloutSlide = await show("callout-family");
+    const callouts = Array.from(calloutSlide.querySelectorAll(".callout"));
+    const calloutProbe = {
+      count: callouts.length,
+      distinctInks:
+        new Set(callouts.map((callout) => getComputedStyle(callout).borderLeftColor)).size ===
+        callouts.length,
+      iconsHidden: callouts.every(
+        (callout) =>
+          getComputedStyle(callout.querySelector(".callout-icon-container")).display === "none",
+      ),
+      ruleWidths: callouts.map((callout) =>
+        Number.parseFloat(getComputedStyle(callout).borderLeftWidth),
+      ),
+      titlesQuiet: callouts.every((callout) => {
+        const title = callout.querySelector(".callout-title");
+        const paragraph = title.querySelector("p");
+        return (
+          getComputedStyle(title).backgroundColor === "rgba(0, 0, 0, 0)" &&
+          getComputedStyle(paragraph).textTransform === "uppercase" &&
+          getComputedStyle(paragraph).color === getComputedStyle(callout).borderLeftColor
+        );
+      }),
+    };
+
+    const darkSlide = await show("dark-background-navigation");
+    const darkCallout = darkSlide.querySelector(".callout");
+    const darkPrimaryChip = darkSlide.querySelector(".slide-nav a.primary");
+    const darkCalloutProbe = {
+      solidSurface: getComputedStyle(darkCallout).backgroundColor === "rgb(241, 245, 249)",
+      darkText:
+        getComputedStyle(darkCallout.querySelector(".callout-content p")).color ===
+        "rgb(15, 23, 42)",
+      primaryChipLight: getComputedStyle(darkPrimaryChip).color === "rgb(248, 250, 252)",
+    };
+
+    const skipped = await show("skipped-section");
+    const skippedHeading = skipped.querySelector("h1");
+    const skippedProbe = {
+      notAgenda: !skipped.classList.contains("agenda-slide"),
+      headingVisible: skippedHeading.getBoundingClientRect().width > 100,
+    };
+
+    const buildUp = await show("figure-build-up");
+    const layers = Array.from(buildUp.querySelectorAll(".r-stack img"));
+    await Promise.all(
+      layers.map((image) =>
+        image.complete
+          ? Promise.resolve()
+          : new Promise((resolve) => image.addEventListener("load", resolve, { once: true })),
+      ),
+    );
+    const layerCenters = layers.map((image) => {
+      const box = rect(image);
+      return [Math.round(box.left + box.width / 2), Math.round(box.top + box.height / 2)];
+    });
+    const buildUpProbe = {
+      layerCount: layers.length,
+      layersAligned:
+        Math.abs(layerCenters[0][0] - layerCenters[1][0]) <= 2 &&
+        Math.abs(layerCenters[0][1] - layerCenters[1][1]) <= 2,
+      secondIsFragment: layers[1].classList.contains("fragment"),
+    };
+
+    const gating = await show("mode-gating");
+    const gatingProbe = {
+      liveVisible: getComputedStyle(gating.querySelector(".live-only")).display !== "none",
+      handoutHidden: getComputedStyle(gating.querySelector(".handout-only")).display === "none",
+    };
+
+    const photograph = await show("photograph");
+    const photographHeading = photograph.querySelector("h2");
+    const photographCaption = photograph.querySelector(":scope > p");
+    const photographAttribution = photograph.querySelector(":scope > .attribution");
+    const photographProbe = {
+      attributionHorizontal:
+        getComputedStyle(photographAttribution).writingMode === "horizontal-tb",
+      captionCapped: rect(photographCaption).width < rect(photograph).width * 0.75,
+      chromeHidden:
+        getComputedStyle(footer).display === "none" &&
+        getComputedStyle(slideNumber).display === "none",
+      headingBottom: rect(photographHeading).bottom > rect(photograph).height * 0.5,
+      scrimmed: getComputedStyle(photographHeading).backgroundColor.includes("0.66"),
+    };
+
+    const closing = await show("closing");
+    const closingContact = closing.querySelector(":scope > p:first-of-type");
+    const closingQr = closing.querySelector("img.qr");
+    const closingProbe = {
+      contactRuled: Number.parseFloat(getComputedStyle(closingContact).borderTopWidth) === 1,
+      fits: closing.scrollHeight <= closing.clientHeight + 2,
+      footerHidden: getComputedStyle(footer).display === "none",
+      qrDocked:
+        getComputedStyle(closingQr).position === "absolute" &&
+        Math.abs(rect(closingQr).right - rect(closing).right) < 2,
+      qrGenerated:
+        closingQr.src.startsWith("data:image/svg+xml;base64,") &&
+        closingQr.alt.includes("example.org"),
+      ruleHeight: Number.parseFloat(getComputedStyle(closing, "::before").height),
+      headingRuleGone: getComputedStyle(closing.querySelector("h2"), "::after").content === "none",
+    };
+
+    return {
+      buildUp: buildUpProbe,
+      callouts: calloutProbe,
+      closing: closingProbe,
+      darkCallout: darkCalloutProbe,
+      gating: gatingProbe,
+      photograph: photographProbe,
+      skipped: skippedProbe,
+      statement: statementProbe,
+    };
+  });
+  console.log(JSON.stringify({ primitives }));
+  if (
+    !primitives.statement.centered ||
+    !primitives.statement.fits ||
+    !primitives.statement.kickerRuleGone ||
+    !Number.isFinite(primitives.statement.sentenceSize) ||
+    primitives.statement.sentenceSize < 55 ||
+    !primitives.statement.statColumns ||
+    !Number.isFinite(primitives.statement.statSize) ||
+    primitives.statement.statSize < 70
+  ) {
+    throw new Error(`statement contract failed: ${JSON.stringify(primitives.statement)}`);
+  }
+  if (
+    primitives.callouts.count !== 3 ||
+    !primitives.callouts.distinctInks ||
+    !primitives.callouts.iconsHidden ||
+    !primitives.callouts.ruleWidths.every((width) => width === 4) ||
+    !primitives.callouts.titlesQuiet ||
+    !primitives.darkCallout.solidSurface ||
+    !primitives.darkCallout.darkText ||
+    !primitives.darkCallout.primaryChipLight
+  ) {
+    throw new Error(
+      `callout contract failed: ${JSON.stringify({
+        callouts: primitives.callouts,
+        darkCallout: primitives.darkCallout,
+      })}`,
+    );
+  }
+  if (
+    primitives.buildUp.layerCount !== 2 ||
+    !primitives.buildUp.layersAligned ||
+    !primitives.buildUp.secondIsFragment
+  ) {
+    throw new Error(`figure build-up contract failed: ${JSON.stringify(primitives.buildUp)}`);
+  }
+  if (!primitives.gating.liveVisible || !primitives.gating.handoutHidden) {
+    throw new Error(`live mode gating failed: ${JSON.stringify(primitives.gating)}`);
+  }
+  if (!primitives.skipped.notAgenda || !primitives.skipped.headingVisible) {
+    throw new Error(`no-agenda section contract failed: ${JSON.stringify(primitives.skipped)}`);
+  }
+  if (
+    !primitives.photograph.attributionHorizontal ||
+    !primitives.photograph.captionCapped ||
+    !primitives.photograph.chromeHidden ||
+    !primitives.photograph.headingBottom ||
+    !primitives.photograph.scrimmed
+  ) {
+    throw new Error(`full-bleed contract failed: ${JSON.stringify(primitives.photograph)}`);
+  }
+  if (
+    !primitives.closing.contactRuled ||
+    !primitives.closing.fits ||
+    !primitives.closing.footerHidden ||
+    !primitives.closing.qrDocked ||
+    !primitives.closing.qrGenerated ||
+    primitives.closing.ruleHeight !== 4 ||
+    !primitives.closing.headingRuleGone
+  ) {
+    throw new Error(`closing slide contract failed: ${JSON.stringify(primitives.closing)}`);
+  }
+
   deckUrl.search = "?handout=true";
   await openReadyDeck(page, deckUrl.href);
   const handout = await page.evaluate(async () => {
@@ -427,6 +638,7 @@ try {
     const noteRect = notes.getBoundingClientRect();
     const asideRect = aside.getBoundingClientRect();
     const navigationRect = navigation.getBoundingClientRect();
+    const gating = document.getElementById("mode-gating");
     return {
       active: document.documentElement.classList.contains("altmejd-handout"),
       notesVisible: notes !== null && getComputedStyle(notes).display !== "none",
@@ -435,11 +647,19 @@ try {
         asideRect.bottom <= noteRect.top + 1 &&
         noteRect.bottom <= navigationRect.top + 1 &&
         Math.abs(navigationRect.bottom - slide.getBoundingClientRect().bottom) < 2,
+      liveHidden: getComputedStyle(gating.querySelector(".live-only")).display === "none",
+      handoutShown: getComputedStyle(gating.querySelector(".handout-only")).display !== "none",
     };
   });
   console.log(JSON.stringify({ handout }));
-  if (!handout.active || !handout.notesVisible || !handout.boxesStacked) {
-    throw new Error(`handout mode did not stack speaker notes: ${JSON.stringify(handout)}`);
+  if (
+    !handout.active ||
+    !handout.notesVisible ||
+    !handout.boxesStacked ||
+    !handout.liveHidden ||
+    !handout.handoutShown
+  ) {
+    throw new Error(`handout mode contract failed: ${JSON.stringify(handout)}`);
   }
 
   await openReadyDeck(page, pathToFileURL(noAgendaPath).href);
@@ -476,8 +696,20 @@ try {
     agendas: document.querySelectorAll(".agenda-bullets-numbered").length,
     orderedLists: document.querySelectorAll(".agenda-bullets-numbered > ol").length,
     kicker: Boolean(document.querySelector(".agenda-slide .section-kicker")),
+    // The fixture enables agenda.clickable, so every item links to its
+    // section without picking up the prose underline.
+    links: document.querySelectorAll('.agenda a[href^="#"]').length,
+    linksQuiet: Array.from(document.querySelectorAll(".agenda a")).every(
+      (link) => getComputedStyle(link).textDecorationLine === "none",
+    ),
   }));
-  if (numberedAgenda.agendas !== 2 || numberedAgenda.orderedLists !== 2 || !numberedAgenda.kicker) {
+  if (
+    numberedAgenda.agendas !== 2 ||
+    numberedAgenda.orderedLists !== 2 ||
+    !numberedAgenda.kicker ||
+    numberedAgenda.links !== 4 ||
+    !numberedAgenda.linksQuiet
+  ) {
     throw new Error(`numbered agenda variant failed: ${JSON.stringify(numberedAgenda)}`);
   }
 

@@ -180,7 +180,81 @@ The PDF renderer should expose a visible overflow cue or fail its overflow check
 Navigation chips must keep their own light-surface contrast pair here instead
 of inheriting the dark-slide white link color.
 
+::: {.callout-important title="Assumption"}
+Callouts keep a solid light surface with dark text on author-dark slides.
+:::
+
 ::: {.slide-nav}
 [Back to notes](#notes-and-aside){.back}
-[Fragments](#fragments)
+[Fragments](#fragments){.primary}
 :::
+
+# Skipped section {.no-agenda #skipped-section}
+
+This level-one heading opts out of agenda generation, so the deck keeps
+exactly one generated agenda slide.
+
+## Statement stress {.statement #statement-stress}
+
+A deliberately long single-sentence takeaway that has to wrap over several
+lines while staying balanced and inside the slide's safe area.
+
+::: {.stat-row}
+[1,234,567]{.stat} observations with a long label that wraps under its number
+
+[**+0.184**]{.stat} standard deviations
+
+[99.4%]{.stat} interval coverage
+:::
+
+## Callout family {#callout-family}
+
+::: {.callout-note title="Definition"}
+The running variable is the priority score centered at the cutoff.
+:::
+
+::: {.callout-tip title="Result"}
+Estimates remain stable across every bandwidth in the grid.
+:::
+
+::: {.callout-caution title="Caution"}
+Precise manipulation of the running variable would invalidate the design.
+:::
+
+## Figure build-up {#figure-build-up}
+
+::: {.r-stack}
+![](../../examples/assets/buildup-points.svg){width="900" fig-alt="Synthetic binned outcomes without a fit"}
+
+![](../../examples/assets/buildup-fit.svg){.fragment width="900" fig-alt="The same binned outcomes with local fits added"}
+:::
+
+## Mode gating {#mode-gating}
+
+Visible in every delivery mode.
+
+::: {.live-only}
+A live-only discussion prompt.
+:::
+
+::: {.handout-only}
+A handout-only reading note.
+:::
+
+## Photograph slide with a deliberately long title {.full-bleed background-image="../../examples/assets/field.svg" background-size="cover" #photograph}
+
+A caption chip long enough to test that it wraps inside its width cap instead
+of stretching across the full photograph.
+
+::: {.attribution}
+Synthetic scene · generated illustration credit line
+:::
+
+## Closing {.closing-slide #closing}
+
+contact\@example.org · [example.org](https://example.org) · a contact line made
+long enough to test wrapping above the hairline
+
+Draft and code: [example.org/paper](https://example.org/paper)
+
+[QR code linking to example.org/paper](https://example.org/paper?deliberately-long=query&to-exercise=version-selection){.qr}
