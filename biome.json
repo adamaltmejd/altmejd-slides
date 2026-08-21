@@ -1,9 +1,10 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.12/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.9/schema.json",
   "files": {
     "includes": [
       "**",
       "!!_extensions/altmejd-slides/_extensions",
+      "!!_extensions/altmejd-slides/resources/katex",
       "!!**/*_files",
       "!!_site",
       "!!node_modules",
@@ -19,7 +20,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "preset": "recommended"
     }
   },
   "javascript": {

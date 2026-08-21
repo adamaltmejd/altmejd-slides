@@ -16,6 +16,7 @@ format:
 # These are the built-in defaults, written out so a new deck has one obvious
 # place to edit its palette and section agendas.
 altmejd-slides:
+  math: true
   colors:
     background: "#f8fafc"
     foreground: "#0f172a"
@@ -29,8 +30,8 @@ altmejd-slides:
     muted: "#64748b"
   agenda:
     enabled: true
-    heading: Outline
-    bullets: bullet
+    heading: false
+    bullets: none
     clickable: false
 
 slide-remote:

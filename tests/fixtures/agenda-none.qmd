@@ -1,0 +1,80 @@
+---
+title: "Dense Unbulleted Agenda Fixture"
+format:
+  altmejd-slides-revealjs:
+    transition: none
+    width: 1600
+    height: 900
+altmejd-slides:
+  agenda:
+    heading: false
+    bullets: none
+---
+
+# Motivation
+
+AN ELEVEN-SECTION AGENDA MATCHING A LARGE RESEARCH TALK
+
+## Motivation result
+
+Content.
+
+# Data and institutional details
+
+## Data result
+
+Content.
+
+# Research design
+
+## Design result
+
+Content.
+
+# First stage
+
+## First-stage result
+
+Content.
+
+# Balance and diagnostics
+
+## Balance result
+
+Content.
+
+# Main results
+
+## Main result
+
+Content.
+
+# Mechanisms: income
+
+## Income result
+
+Content.
+
+# Mechanisms: job conditions
+
+## Job-conditions result
+
+Content.
+
+# Mechanisms: partners
+
+## Partner result
+
+Content.
+
+# Conclusion
+
+## Conclusion result
+
+Content.
+
+# Appendix
+
+## Appendix result
+
+Content.

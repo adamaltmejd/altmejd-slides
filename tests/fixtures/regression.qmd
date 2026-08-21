@@ -1,8 +1,28 @@
 ---
-title: "Regression Fixture"
-author: "Theme CI"
+title: "Regression Fixture with a Deliberately Long Research Title"
+subtitle: "Layout invariants"
+author:
+  - name: "Ada Researcher"
+    affiliations:
+      - name: "Institute for Applied Evidence"
+      - name: "Research Network One"
+      - name: "Research Network Two"
+  - name: "Ben Collaborator"
+    affiliations:
+      - name: "University of Long Institutional Names"
+      - name: "Policy Lab"
+  - name: "Cora Coauthor"
+    affiliations:
+      - name: "Department of Economics"
+      - name: "Centre for Population Studies"
+      - name: "Evidence Consortium"
+  - name: "Devon Analyst"
+    affiliations:
+      - name: "Royal Institute of Quantitative Research"
+      - name: "Methods Group"
 format:
   altmejd-slides-revealjs:
+    footer: "Regression footer"
     transition: none
     width: 1600
     height: 900
@@ -14,10 +34,16 @@ altmejd-slides:
 
 ## Notes and aside
 
-Visible content must not overlap either bottom box.
+![](../../examples/assets/estimate.svg){.r-stretch fig-alt="A landscape estimate fixture above a multi-line aside"}
+
+::: {.slide-nav}
+[Compact navigation](#compact-navigation){.back}
+[Alternative](#automatic-figure-panels)
+:::
 
 ::: {.aside}
-A visible aside.
+A visible aside with enough text to wrap over multiple lines. The stretched
+figure must end above this box in live presentation mode as well as in PDFs.
 :::
 
 ::: notes
@@ -25,6 +51,62 @@ A speaker note rendered only in handout mode.
 :::
 
 # Configured section
+
+FOR RESEARCH TALKS AND LECTURES
+
+## Automatic figure panels
+
+:::: {.columns}
+::: {.column width="50%"}
+**Landscape**
+
+![](../../examples/assets/estimate.svg){fig-alt="A landscape coefficient estimate"}
+:::
+::: {.column width="50%"}
+**Portrait**
+
+![](../../examples/assets/portrait.svg){fig-alt="A portrait coefficient estimate"}
+:::
+::::
+
+[Back to notes](#notes-and-aside) · [Baseline](#near-cap-code-block) · [Robustness A](#long-code) · [Robustness B](#fragments)
+
+## Explicit one-panel layout
+
+::: {.figure-panels}
+::: {.figure-panel}
+**Single portrait panel**
+
+![](../../examples/assets/portrait.svg){fig-alt="A single portrait panel"}
+:::
+:::
+
+[Back to paired panels](#automatic-figure-panels)
+
+## Compact navigation
+
+![](../../examples/assets/estimate.svg){.r-stretch fig-align="left" fig-alt="A deliberately left-aligned figure above a long navigation row"}
+
+::: {.slide-nav}
+[Main result](#automatic-figure-panels){.back} ·
+[Women](#near-cap-code-block) ·
+[Men](#long-code) ·
+[Age 30](#fragments) ·
+[Age 45](#notes-and-aside) ·
+[Long programs](#automatic-figure-panels) ·
+[Short programs](#compact-navigation) ·
+[Alternative outcome](#configured-section) ·
+[Placebo outcome](#near-cap-code-block) ·
+[Different bandwidth](#long-code) ·
+[Preferred specification](#fragments) ·
+[Full sample](#notes-and-aside) ·
+[Excluding movers](#automatic-figure-panels) ·
+[Alternative fixed effects](#compact-navigation) ·
+[Clustered inference](#near-cap-code-block) ·
+[Randomization inference](#long-code) ·
+[Pre-registered outcome](#fragments) ·
+[Complete-case sample](#notes-and-aside)
+:::
 
 ## Near-cap code block
 
@@ -46,6 +128,16 @@ colorblind_palette <- function(palette) {
     geom_raster() + facet_wrap(vars(variable), nrow = 4)
 }
 ```
+
+## Self-contained mathematics
+
+Inline math remains crisp: $\hat{\beta} = 0.18$.
+
+$$
+\operatorname{ATE} = \mathbb{E}[Y_i(1) - Y_i(0)].
+$$
+
+[$t=25$](#automatic-figure-panels){.back}
 
 ## Long code
 

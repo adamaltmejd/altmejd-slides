@@ -1,5 +1,6 @@
 ---
 title: "No Agenda Fixture"
+author: "Theme CI"
 format:
   altmejd-slides-revealjs:
     transition: none

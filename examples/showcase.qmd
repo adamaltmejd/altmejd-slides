@@ -1,111 +1,407 @@
 ---
-title: "Altmejd Slides"
-subtitle: "A visual and behavioral showcase"
+title: "After Hours"
+subtitle: "Study-space access and course progress · a synthetic research-talk fixture"
 author:
   - name: Adam Altmejd Selder
     affiliations:
       - name: Stockholm University
-date: 2026-08-20
+      - name: IFAU
+  - name: Ada Researcher
+    affiliations:
+      - name: Northbridge University
+  - name: Ben Collaborator
+    affiliations:
+      - name: Civic Data Lab
+      - name: Evidence Network
+  - name: Cora Analyst
+    affiliations:
+      - name: Institute for Applied Evidence
+date: 2026-08-21
 format:
   altmejd-slides-revealjs:
-    footer: "Adam Altmejd Selder · {{< meta date >}}"
+    footer: "Synthetic example · no empirical claims"
     transition: none
     width: 1600
     height: 900
+    slide-number: c/t
 slide-remote:
   show-button: false
   disable-on-params: [pdf, handout]
 ---
 
-## The question
+## Why evening study space? {#motivation}
 
-How should a result travel from analysis to a talk?
+- Many students combine full-time study with paid work and caring responsibilities.
+- Quiet study space is scarce precisely when flexible students can use it.
+- A score-based access rule creates a useful synthetic experiment.
 
-- Preserve the argument.
-- Make uncertainty visible.
-- Keep the source reproducible.
+  - The threshold is known in advance.
+  - Students cannot precisely manipulate their score.
+  - Administrative records follow outcomes for four terms.
 
-::: notes
-This standard Reveal note stays hidden while presenting, is available to
-speaker view and Slide Remote, and appears in the handout PDF.
+::: {.aside}
+Every institution, observation, citation, and estimate in this deck is
+synthetic. The citation line is intentionally long enough to exercise wrapping.
 :::
 
-# Evidence
+::: notes
+Open with the constraint, not the design. The point of this fixture is that a
+real speaker note remains available to presenter view and Slide Remote, then
+appears in the handout PDF.
+:::
 
-## A result with context
+## Question and preview {#question-and-preview}
+
+Does reliable evening access help students make progress?
+
+::: {.incremental}
+1. Access rises sharply at the eligibility threshold.
+2. Course completion improves during the first two terms.
+3. The effect is concentrated among students with inflexible schedules.
+:::
+
+::: notes
+Fragments must collapse to one final-state page in both PDF variants.
+:::
+
+# Setting and data
+
+A SIMPLE RULE, A LINKED PANEL, AND A SHARP THRESHOLD
+
+## The access rule {#access-rule}
+
+:::: {.columns}
+::: {.column width="32%"}
+- Applicants receive a priority score from 0 to 100.
+- Evening access is offered when $s_i \geq 60$.
+- Capacity and opening hours are fixed for the term.[^assignment]
+:::
+::: {.column width="68%"}
+![](assets/threshold.svg){fig-alt="Synthetic score distribution and access jump at a threshold of sixty"}
+:::
+::::
+
+[^assignment]: The fictional rule is deterministic within each application round.
+
+## A descriptive pattern {#descriptive-pattern}
+
+![](assets/trend.svg){.r-stretch fig-alt="Synthetic completion paths for students with and without evening access"}
+
+::: {.aside}
+Descriptive paths are not causal. Values are percentages in a fully synthetic
+panel constructed only to test a labelled research figure.
+:::
+
+::: {.slide-nav}
+[Alternative outcome](#appendix-alternative)
+:::
+
+## Synthetic sample {#synthetic-sample}
+
+| Sample step | Students | Share retained |
+|:------------|---------:|---------------:|
+| Applications received | 12,480 | 100% |
+| Valid priority score | 11,932 | 96% |
+| Within bandwidth | 4,216 | 34% |
+| Linked to outcomes | 4,087 | 33% |
+
+- The running variable is stored as `priority_score`.
+- Outcomes come from a linked four-term panel.
+
+::: {.aside}
+Synthetic administrative records, deliberately formatted like a compact
+research-table source note.
+:::
+
+# Research design
+
+LOCAL COMPARISONS AROUND A PRE-ANNOUNCED ACCESS RULE
+
+## From score to access {#assignment-pathway}
+
+![](assets/pathways.svg){fig-alt="A pathway from priority score through evening access and study time to course progress"}
+
+::: {.attribution}
+Synthetic design diagram · arrows encode the estimand, not empirical findings
+:::
+
+::: notes
+The attribution is a direct slide child so it stays compatible with Reveal
+plugins and does not collide with the footer.
+:::
+
+## Estimating equations {#estimating-equations}
+
+**First stage**
+
+$$
+\begin{aligned}
+D_{it} &= \pi_0 + \pi_1 \operatorname{Above}_{it}
+  + f_-(r_{it}) + f_+(r_{it}) \\
+&\quad + \lambda_t + u_{it}
+\end{aligned}
+$$
+
+**Second stage**
+
+$$
+\begin{aligned}
+Y_{it} &= \alpha + \beta \widehat{D}_{it}
+  + g_-(r_{it}) + g_+(r_{it}) \\
+&\quad + \delta_t + \varepsilon_{it}.
+\end{aligned}
+$$
+
+::: {.slide-nav}
+[First stage: $\widehat{\pi}_1$](#first-stage)
+:::
+
+## First stage: access at the cutoff {#first-stage}
+
+![](assets/threshold.svg){.r-stretch fig-alt="Synthetic regression discontinuity plot with a large access jump at the threshold"}
+
+- Access increases by **31 percentage points** at the threshold.
+- The first-stage interval excludes zero in every bandwidth shown.
+
+## Design diagnostics {#design-diagnostics}
+
+:::: {.columns}
+::: {.column width="50%"}
+**Predetermined outcomes**
+
+![](assets/estimate.svg){fig-alt="Synthetic diagnostic estimate with a confidence interval"}
+:::
+::: {.column width="50%"}
+**Covariate balance**
+
+![](assets/portrait.svg){fig-alt="Synthetic dot-and-whisker balance estimates"}
+:::
+::::
+
+[Main result](#main-effect) · [Placebo](#appendix-placebo)
+
+## Specification details {#specification-details}
+
+- $r_{it} = s_{it} - 60$ is the centered score; $\operatorname{Above}_{it}=\mathbf{1}[r_{it}\geq0]$.
+- Local linear fits are estimated separately on either side of the cutoff.
+
+  - Preferred bandwidth: $|r_{it}|<12$.
+  - Application-round fixed effects absorb common shocks.
+  - Standard errors are clustered by student.
+
+- The estimand is local: $\beta = \mathbb{E}[Y_i(1)-Y_i(0)\mid r_i=0]$.
+
+# Results
+
+EFFECTS, UNCERTAINTY, AND USEFUL ALTERNATIVES
+
+## Main effect after two terms {#main-effect}
 
 ::: {.columns}
 ::: {.column width="56%"}
-![A deterministic SVG fixture](assets/estimate.svg){fig-alt="A coefficient estimate with a confidence interval"}
+![](assets/estimate.svg){fig-alt="Synthetic main estimate with a confidence interval"}
 :::
-
 ::: {.column width="44%"}
-- Point estimate: **0.18**
+- Point estimate: **0.18 courses**
 - 95% interval: **0.07–0.29**
-- Pre-specified outcome
+- Pre-specified primary outcome
+- $N=4{,}087$ students
 :::
 :::
 
 ::: {.aside}
-Illustrative values used to exercise layout; they are not empirical claims.
+Illustrative values only. The visible aside reserves space in live slides and
+stacks above the speaker note in handout mode.
 :::
 
 ::: notes
-The handout stacks this speaker note and the visible aside without overlap.
+Pause on the interval before discussing magnitude. This is the canonical
+figure-plus-aside-plus-note handout regression.
 :::
 
-## Fragments collapse in PDFs
+::: {.slide-nav}
+[Design](#estimating-equations){.back}
+[Dynamics](#effects-over-time)
+[Robustness](#robustness-summary)
+:::
+
+## Effects over time and outcomes {#effects-over-time}
+
+:::: {.columns}
+::: {.column width="50%"}
+**Course completion**
+
+![](assets/trend.svg){fig-alt="Synthetic dynamic effects on course completion"}
+:::
+::: {.column width="50%"}
+**Credits earned**
+
+![](assets/estimate.svg){fig-alt="Synthetic estimate for credits earned"}
+:::
+::::
+
+[Alternative outcome](#appendix-alternative)
+
+## A possible pathway {#possible-pathway}
+
+:::: {.columns}
+::: {.column width="42%"}
+- Evening access increases usable study time.
+- The largest gains appear for students with inflexible schedules.
+- This pattern is suggestive, not a separately identified mechanism.
+:::
+::: {.column width="58%"}
+![](assets/pathways.svg){fig-alt="Synthetic pathway through evening access and study time"}
+:::
+::::
+
+::: {.slide-nav}
+[Mechanism check](#appendix-mechanism)
+:::
+
+## Robustness summary {#robustness-summary}
+
+| Specification | Estimate | Standard error | $N$ |
+|:--------------|---------:|---------------:|----:|
+| Baseline | 0.18 | 0.06 | 4,087 |
+| Narrow bandwidth | 0.20 | 0.08 | 2,744 |
+| Donut specification | 0.17 | 0.07 | 3,801 |
+| Covariate adjustment | 0.18 | 0.06 | 4,087 |
+
+::: {.slide-nav}
+[Main result](#main-effect){.back}
+[Placebo](#appendix-placebo)
+[Alternative outcome](#appendix-alternative)
+:::
+
+## What the design identifies {.dark-bg background-color="#1e293b" #design-identifies}
+
+> Near the threshold, access changes sharply while observed student
+> characteristics change smoothly.
 
 ::: {.incremental}
-1. Define the estimand.
-2. Show the identifying variation.
-3. Report uncertainty.
+- The estimate is local to marginal applicants.
+- It combines access, opening hours, and the option value of a quiet room.
+- It does not identify the effect of studying one additional hour.
 :::
 
-::: notes
-Both PDF variants contain the final state once, not one page per fragment.
-:::
+## Scope condition {.light-bg background-color="#ffeac2" #scope-condition}
 
-## Staged code highlighting
+- The mock institution has scarce evening capacity and a transparent rule.
+- Effects may differ when:
 
-```{.r code-line-numbers="1|2-3|4"}
-model <- lm(outcome ~ treatment, data = sample)
-estimate <- coef(model)[["treatment"]]
-interval <- confint(model)["treatment", ]
-c(estimate = estimate, lower = interval[1], upper = interval[2])
-```
+  - access is universal;
+  - online resources are close substitutes; or
+  - students can precisely manipulate assignment.
 
-::: notes
-Handout mode does not leave unselected code lines dimmed.
-:::
-
-## Tables remain readable
-
-| Specification | Estimate | Standard error |
-|:--------------|---------:|---------------:|
-| Baseline      | 0.18     | 0.06           |
-| Controls      | 0.17     | 0.06           |
-| Fixed effects | 0.15     | 0.07           |
-
-## Explicit dark background {.dark-bg background-color="#1e293b"}
-
-Text color is opt-in for dark backgrounds.
-
-- Links remain [distinguishable](https://quarto.org/).
-- Emphasis does not depend on color alone.
-
-## Light custom background {.light-bg background-color="#ffeac2"}
-
-Light backgrounds never inherit white text merely because a background color exists.
+The [design notes](https://quarto.org/docs/presentations/revealjs/) link remains
+distinguishable without requiring a network request to render the deck.
 
 # Conclusion
 
-## What the format promises
+WHAT THE SYNTHETIC EXERCISE WOULD SUPPORT
 
-- Markdown and computation remain Quarto-native.
-- Presentation and handout artifacts come from the same rendered deck.
-- The default design is opinionated; the YAML remains easy to edit.
+## Three takeaways {#three-takeaways}
+
+1. A transparent threshold creates a credible local comparison.
+2. Evening access raises short-run course progress in the mock data.
+3. Schedule constraints provide a plausible—but not separately identified—pathway.
 
 ::: {.attribution}
-`altmejd-slides` showcase
+`altmejd-slides` canonical showcase · all results synthetic
+:::
+
+::: notes
+Return to the opening constraint, then state the scope condition once.
+:::
+
+# Appendix
+
+BACKUP CHECKS AND IMPLEMENTATION DETAILS
+
+## Alternative outcome: credits earned {#appendix-alternative}
+
+![](assets/estimate.svg){.r-stretch fig-alt="Synthetic estimate for credits earned"}
+
+::: {.slide-nav}
+[Descriptive pattern](#descriptive-pattern){.back} ·
+[Main effect](#main-effect) ·
+[Dynamics](#effects-over-time) ·
+[Narrow bandwidth](#robustness-summary) ·
+[Donut specification](#appendix-placebo) ·
+[Schedule pathway](#appendix-mechanism) ·
+[Specification](#reproducible-specification)
+:::
+
+## Placebo outcome and reserved footer {#appendix-placebo}
+
+:::: {.columns}
+::: {.column width="50%"}
+**Before assignment**
+
+![](assets/estimate.svg){fig-alt="Synthetic pre-assignment placebo estimate"}
+:::
+::: {.column width="50%"}
+**Unrelated outcome**
+
+![](assets/portrait.svg){fig-alt="Synthetic unrelated-outcome estimates"}
+:::
+::::
+
+::: {.aside}
+Both placebo intervals include zero. This multi-line aside must remain above
+the navigation row while both figure panels retain useful height.
+:::
+
+::: {.slide-nav}
+[Robustness summary](#robustness-summary){.back}
+:::
+
+## Mechanism check: inflexible schedules {#appendix-mechanism}
+
+![](assets/portrait.svg){.r-stretch fig-alt="Synthetic heterogeneous estimates by schedule flexibility"}
+
+::: {.aside}
+Groups are defined before assignment. Higher values indicate less schedule
+flexibility; all quantities are synthetic.
+:::
+
+::: notes
+The direct-child order is media, visible aside, note, then navigation in the
+handout even though navigation appears earlier in the source on other slides.
+:::
+
+::: {.slide-nav}
+[Possible pathway](#possible-pathway){.back}
+[Main effect](#main-effect)
+:::
+
+## Reproducible specification {#reproducible-specification}
+
+```{.r code-line-numbers="1-2|3-5|6"}
+sample <- applicants[abs(priority_score - 60) < 12, ]
+sample$above <- sample$priority_score >= 60
+first_stage <- lm(access ~ above * centered_score, data = sample)
+outcome <- lm(courses_completed ~ fitted(first_stage), data = sample)
+interval <- confint(outcome, "fitted(first_stage)")
+c(estimate = coef(outcome)[2], lower = interval[1], upper = interval[2])
+```
+
+::: notes
+This is inert illustrative code. Handout mode must not leave non-selected lines
+dimmed, and PDF export must keep only the final highlighted state.
+:::
+
+## Design contract {.light-bg background-color="#f1f5f9" #design-contract}
+
+This compact deck now exercises the normal development surface:
+
+- multi-author title metadata and consistent gradient rules;
+- plain section agendas, footers, progress, and `c/t` numbering;
+- nested text, tables, equations, code, fragments, and custom backgrounds;
+- single and paired SVGs, varied aspect ratios, asides, notes, and attribution;
+- reciprocal internal navigation and a compact appendix link set.
+
+::: {.attribution}
+Fast to render · deterministic · offline
 :::
