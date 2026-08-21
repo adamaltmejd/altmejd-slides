@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" role="img" aria-labelledby="title desc">
+  <title id="title">Synthetic assignment and outcome pathway</title>
+  <desc id="desc">Priority score determines evening access, which can increase course progress, while schedule constraints modify the pathway.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#644043"/>
+    </marker>
+  </defs>
+  <rect width="960" height="500" rx="16" fill="#f8fafc"/>
+  <g stroke="#644043" stroke-width="5" fill="none" marker-end="url(#arrow)">
+    <path d="M 272 178 C 316 178, 334 178, 380 178"/>
+    <path d="M 580 178 C 624 178, 642 178, 688 178"/>
+    <path d="M 474 354 C 474 310, 474 286, 474 246" stroke="#e26d5c"/>
+  </g>
+  <g font-family="system-ui, sans-serif" text-anchor="middle">
+    <g>
+      <rect x="76" y="112" width="196" height="132" rx="18" fill="#ffeac2" stroke="#644043" stroke-width="4"/>
+      <text x="174" y="166" fill="#0f172a" font-size="28" font-weight="700">Priority score</text>
+      <text x="174" y="204" fill="#64748b" font-size="23">assignment rule</text>
+    </g>
+    <g>
+      <rect x="380" y="112" width="200" height="132" rx="18" fill="#644043" stroke="#644043" stroke-width="4"/>
+      <text x="480" y="166" fill="#ffffff" font-size="28" font-weight="700">Evening access</text>
+      <text x="480" y="204" fill="#ffeac2" font-size="23">treatment</text>
+    </g>
+    <g>
+      <rect x="688" y="112" width="196" height="132" rx="18" fill="#c9cba3" stroke="#644043" stroke-width="4"/>
+      <text x="786" y="166" fill="#0f172a" font-size="28" font-weight="700">Course progress</text>
+      <text x="786" y="204" fill="#475569" font-size="23">outcome</text>
+    </g>
+    <g>
+      <rect x="350" y="354" width="248" height="100" rx="18" fill="#f1f5f9" stroke="#e26d5c" stroke-width="4"/>
+      <text x="474" y="398" fill="#0f172a" font-size="27" font-weight="700">Schedule constraints</text>
+      <text x="474" y="432" fill="#64748b" font-size="22">effect heterogeneity</text>
+    </g>
+  </g>
+</svg>

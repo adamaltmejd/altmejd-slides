@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 720" role="img" aria-labelledby="title desc">
+  <title id="title">Portrait research figure fixture</title>
+  <desc id="desc">A vertical dot-and-whisker chart used to test panel fitting.</desc>
+  <rect width="420" height="720" rx="12" fill="#f8fafc"/>
+  <line x1="92" y1="80" x2="92" y2="640" stroke="#94a3b8" stroke-width="3"/>
+  <line x1="92" y1="640" x2="370" y2="640" stroke="#94a3b8" stroke-width="3"/>
+  <line x1="210" y1="96" x2="210" y2="625" stroke="#e2e8f0" stroke-width="3" stroke-dasharray="9 9"/>
+  <g stroke="#644043" stroke-width="8" stroke-linecap="round" fill="#e26d5c">
+    <line x1="142" y1="180" x2="288" y2="180"/><circle cx="228" cy="180" r="12"/>
+    <line x1="116" y1="300" x2="250" y2="300"/><circle cx="184" cy="300" r="12"/>
+    <line x1="176" y1="420" x2="336" y2="420"/><circle cx="264" cy="420" r="12"/>
+    <line x1="128" y1="540" x2="272" y2="540"/><circle cx="206" cy="540" r="12"/>
+  </g>
+</svg>

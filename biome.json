@@ -4,6 +4,7 @@
     "includes": [
       "**",
       "!!_extensions/altmejd-slides/_extensions",
+      "!!_extensions/altmejd-slides/resources/katex",
       "!!**/*_files",
       "!!_site",
       "!!node_modules",

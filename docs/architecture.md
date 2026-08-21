@@ -7,8 +7,9 @@ default design rather than research and teaching presets.
 
 1. `_extensions/altmejd-slides/` is the complete installable format.
 2. `template.qmd` is the canonical copyable starting point.
-3. `examples/showcase.qmd` is the visual reference deck.
-4. `tests/fixtures/` contains adversarial compatibility cases.
+3. `examples/showcase.qmd` is the canonical synthetic research-talk fixture
+   for visual development and full-slide browser sweeps.
+4. `tests/fixtures/` contains adversarial limits and deck-wide agenda variants.
 5. `tools/` renders already-built Reveal HTML into reproducible PDFs.
 
 Repository tooling, examples, tests, and documentation are excluded from
@@ -30,6 +31,7 @@ namespaced block:
 altmejd-slides:
   colors: {}
   agenda: {}
+  math: true
 ```
 
 The Sass theme contains the default palette and structural rules as CSS custom
@@ -37,15 +39,29 @@ properties. The Lua filter validates YAML colors and emits only accepted
 overrides. Those overrides are the author-facing color API; internal Sass
 tokens are not a compatibility surface.
 
-Automatic agendas are on by default. The same Lua filter collects level-one
-headings and inserts a standard Pandoc list for each section divider. It does
-not replace Quarto's slide construction.
+The format converts Pandoc math nodes to stable TeX-bearing spans and renders
+them with a vendored KaTeX build. KaTeX JavaScript, CSS, and fonts are copied as
+a normal Quarto HTML dependency, so equation rendering never depends on a CDN.
+
+Automatic agendas are on by default, without a visible heading or list markers.
+The same Lua filter collects level-one headings, inserts the configured agenda
+content for each section divider, and treats direct section content as a kicker.
+It also recognizes the narrow, semantic
+case of two Quarto columns that each contain a figure and enriches them with
+the extension's fill-height panel class. It does not replace Quarto's slide
+construction.
 
 ## Browser behavior
 
-Browser code is source-controlled and external to the Lua filter. The handout
-runtime activates only for `?handout=true`, exposes direct-child speaker notes,
-measures note and aside boxes, and reserves their combined space.
+Browser code is source-controlled and external to the Lua filter. The runtime
+always measures direct-child visible asides and reserves their space. Under
+`?handout=true` it also exposes direct-child speaker notes, measures them, and
+reserves the combined note-and-aside space.
+
+The runtime disables Reveal 5.1's automatic narrow-screen scroll view. Quarto's
+vertical section stacks are otherwise promoted to extra scroll pages and break
+the title and panel layouts. Phones therefore receive the intact scaled slide
+canvas; landscape orientation is the useful review mode.
 
 Slide Remote 0.5.3 is embedded using Quarto's extension mechanism and enabled
 by the format. Its filter and Reveal plugin remain separate from theme code;

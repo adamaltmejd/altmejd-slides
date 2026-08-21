@@ -5,6 +5,8 @@ project:
     - examples/showcase.qmd
     - tests/fixtures/regression.qmd
     - tests/fixtures/no-agenda.qmd
+    - tests/fixtures/agenda-numbered.qmd
+    - tests/fixtures/agenda-none.qmd
 
 execute:
   freeze: auto

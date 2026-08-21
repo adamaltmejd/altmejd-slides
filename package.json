@@ -1,6 +1,6 @@
 {
   "name": "altmejd-slides",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "A customizable Quarto Reveal format for research and teaching presentations",
   "license": "MIT",
@@ -9,13 +9,14 @@
     "format": "biome check --write .",
     "lint": "biome check .",
     "test": "python3 -m unittest discover -s tools/tests -p 'test_*.py'",
-    "test:browser": "node tools/check_reveal_fixture.mjs _site/tests/fixtures/regression.html '#near-cap-code-block pre' _site/tests/fixtures/no-agenda.html _site/examples/showcase.html",
+    "test:browser": "node tools/check_reveal_fixture.mjs _site/tests/fixtures/regression.html '#near-cap-code-block pre' _site/tests/fixtures/no-agenda.html _site/examples/showcase.html _site/tests/fixtures/agenda-numbered.html _site/tests/fixtures/agenda-none.html && node tools/check_showcase.mjs _site/examples/showcase.html",
     "render:examples": "quarto render",
     "pdf:examples": "python3 tools/render_revealjs_pdfs.py --site-dir _site --glob 'examples/*.html' --output-dir output/pdf"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.12",
-    "decktape": "3.16.1"
+    "decktape": "3.16.1",
+    "katex": "0.18.1"
   },
   "engines": {
     "bun": ">=1.3.0"

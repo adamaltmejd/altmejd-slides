@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 520" role="img" aria-labelledby="title desc">
+  <title id="title">Synthetic course-completion paths</title>
+  <desc id="desc">Two cumulative completion paths over twelve weeks, with the evening-access group ending higher.</desc>
+  <rect width="960" height="520" rx="16" fill="#f8fafc"/>
+  <g stroke="#e2e8f0" stroke-width="2">
+    <line x1="108" y1="90" x2="884" y2="90"/><line x1="108" y1="185" x2="884" y2="185"/>
+    <line x1="108" y1="280" x2="884" y2="280"/><line x1="108" y1="375" x2="884" y2="375"/>
+  </g>
+  <g stroke="#64748b" stroke-width="3">
+    <line x1="108" y1="64" x2="108" y2="408"/><line x1="108" y1="408" x2="884" y2="408"/>
+  </g>
+  <polyline points="108,380 178,358 248,332 318,304 388,275 458,242 528,207 598,174 668,145 738,119 808,96 878,78" fill="none" stroke="#644043" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="108,386 178,372 248,354 318,334 388,311 458,287 528,262 598,238 668,216 738,197 808,181 878,167" fill="none" stroke="#e26d5c" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="#0f172a" font-family="system-ui, sans-serif" font-size="25">
+    <text x="94" y="446">1</text><text x="454" y="446">6</text><text x="862" y="446">12</text>
+    <text x="438" y="486" font-size="27">Week of term</text>
+    <text x="694" y="64" fill="#644043" font-weight="700">Evening access</text>
+    <text x="694" y="190" fill="#b44f42" font-weight="700">Comparison</text>
+  </g>
+  <text x="32" y="275" transform="rotate(-90 32 275)" fill="#0f172a" font-family="system-ui, sans-serif" font-size="27">Courses completed (%)</text>
+</svg>

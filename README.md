@@ -28,7 +28,7 @@ quarto update adamaltmejd/altmejd-slides
 Pin a deck to a released extension when reproducibility matters:
 
 ```sh
-quarto add adamaltmejd/altmejd-slides@v0.1.0
+quarto add adamaltmejd/altmejd-slides@v0.2.0
 ```
 
 The complete copyable front matter lives in [`template.qmd`](template.qmd).
@@ -60,8 +60,8 @@ altmejd-slides:
     accent: "#d1495b"
   agenda:
     enabled: true
-    heading: Outline
-    bullets: numbered # bullet, numbered, or none
+    heading: false # false by default, or any text
+    bullets: none # none by default; bullet and numbered are available
     clickable: false
 ```
 
@@ -73,6 +73,66 @@ its generated agenda slide, or set `agenda.enabled: false` for the whole deck.
 Keep native Reveal and Quarto settings—such as footer, logo, dimensions,
 transition, and slide numbers—under the format rather than duplicating them in
 `altmejd-slides`.
+
+## Research-slide primitives
+
+Ordinary two-column slides are automatically upgraded to fill-height figure
+panels when both columns contain an image. A short panel label, the image, and
+an optional internal-link row are enough:
+
+Standalone figures are centered by default. Use `fig-align="left"` or
+`fig-align="right"` on an individual image when its alignment should differ;
+`.r-stretch` controls sizing independently and is not needed for centering.
+
+```markdown
+:::: {.columns}
+::: {.column width="50%"}
+**Women**
+
+![](women.svg)
+:::
+::: {.column width="50%"}
+**Men**
+
+![](men.svg)
+:::
+::::
+
+[Number of children](#number-of-children)
+```
+
+Use `.figure-panels` explicitly for a one-panel layout or to make the intent
+clear. Its direct children may be ordinary `.column` elements or
+`.figure-panel` elements. Images preserve their aspect ratio, panel headings
+align, and the filter reserves the bottom link row.
+
+Use `.slide-nav` for compact internal navigation. Add `.back` to a return link
+or `.primary` only when an action genuinely needs emphasis. The quiet action row
+is fixed to the bottom-right footer line, after visible asides and handout notes,
+and wraps when needed. The existing `.slide-links` name is also supported:
+
+```markdown
+::: {.slide-nav}
+[Main result](#main-result){.back}
+[Women](#women)
+[Men](#men)
+[Robustness](#robustness)
+:::
+```
+
+Any content immediately below a level-one section heading becomes its agenda
+kicker. For explicit markup, wrap the content in `.section-kicker`. Visible
+direct-child asides reserve their measured height in live slides and handouts;
+speaker notes add a second reserved box only in `?handout=true` mode.
+
+Title slides remain simple for one or two authors. Four authors use one compact
+row; five or six use two rows. Each author's affiliations are comma-separated
+in the same cell.
+
+The format bundles and defaults to KaTeX 0.18.1 for fast, consistent TeX
+typography without a runtime CDN dependency. Set `altmejd-slides.math: false`
+and choose a native Quarto `html-math-method` only when a different renderer is
+deliberately required.
 
 ## Slide Remote
 
@@ -117,10 +177,17 @@ bun run check
 bun run render:examples
 ```
 
-[`examples/showcase.qmd`](examples/showcase.qmd) is the visual reference.
-[`tests/fixtures/regression.qmd`](tests/fixtures/regression.qmd) contains the
-adversarial layout and configuration cases. The supported baseline is the
-Quarto version pinned in CI.
+[`examples/showcase.qmd`](examples/showcase.qmd) is the canonical visual
+development deck: a fully synthetic research talk covering the normal title,
+agenda, text, math, table, figure, note, handout, and appendix-navigation
+surface. Its committed SVGs require no computation or network access. The
+browser check visits every slide in desktop, narrow, and handout modes.
+
+[`tests/fixtures/regression.qmd`](tests/fixtures/regression.qmd) keeps only
+adversarial limits such as unusually long metadata, navigation, and code. The
+agenda fixtures cover deck-wide variants and an eleven-section research-talk
+outline. The supported baseline is the Quarto version pinned in CI; the large
+UCLS deck is an occasional release soak test, not the routine design fixture.
 
 The architecture and public boundaries are recorded in
 [`docs/architecture.md`](docs/architecture.md).

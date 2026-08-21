@@ -11,7 +11,7 @@ $selection-bg: rgba(146, 79, 91, 0.28) !default;
 $font-family-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif !default;
 $font-family-monospace: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace !default;
 $presentation-heading-font: $font-family-sans-serif !default;
-$presentation-font-size-root: 30px !default;
+$presentation-font-size-root: 40px !default;
 $presentation-heading-color: $body-color !default;
 $presentation-heading-font-weight: 650 !default;
 $presentation-heading-text-transform: none !default;
@@ -114,7 +114,7 @@ $code-bg: $altmejd-code-bg !default;
   right: 0;
   bottom: 0;
   left: 0;
-  height: 3px;
+  height: 4px;
   background: linear-gradient(
     90deg,
     var(--altmejd-heading-line-start),
@@ -224,6 +224,16 @@ $code-bg: $altmejd-code-bg !default;
   border-radius: 3px;
 }
 
+// A top-level image is a standalone slide figure. Center it by default while
+// preserving Quarto's explicit per-image left/right alignment overrides.
+.reveal
+  .slide
+  > img:not(.quarto-figure-left):not(.quarto-figure-right) {
+  display: block;
+  margin-right: auto;
+  margin-left: auto;
+}
+
 .reveal .progress {
   height: 3px;
   background: color-mix(in srgb, var(--altmejd-border) 35%, transparent);
@@ -249,20 +259,27 @@ $code-bg: $altmejd-code-bg !default;
   text-align: left;
 }
 
-// Quarto-native title fields remain intact and can be populated from ordinary
-// title, subtitle, author, institute, and date metadata.
+// Quarto-native title fields form an editorial cover grid: event and date at
+// the top, the title below, and the author group anchored near the bottom.
 #title-slide {
-  display: flex !important;
-  flex-direction: column;
-  justify-content: center;
+  top: 0 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(2rem, 1fr) auto;
+  align-content: stretch;
+  justify-content: stretch;
+  box-sizing: border-box;
   height: 100%;
+  padding: 4.2em 0 2.25em;
   text-align: left;
 }
 
 #title-slide::before {
   content: "";
   position: absolute;
-  top: 0;
+  // Align with the rule below a one-line slide heading. The offset is the
+  // heading's line box plus bottom padding, less the rule itself.
+  top: calc(1.8944em - 4px);
   right: 0;
   left: 0;
   height: 4px;
@@ -274,29 +291,113 @@ $code-bg: $altmejd-code-bg !default;
 }
 
 #title-slide .title {
-  margin-bottom: 0.12em;
-  font-size: 1.9em;
-  font-weight: 720;
-  line-height: 1.04;
-  letter-spacing: -0.025em;
+  grid-row: 2;
+  grid-column: 1 / -1;
+  max-width: 15ch;
+  margin: 0.22em 0 0;
+  font-size: 2.3em;
+  font-weight: 740;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
 }
 
 #title-slide .subtitle {
-  margin-bottom: 1.1em;
+  grid-row: 1;
+  grid-column: 1;
+  align-self: end;
+  margin: 0;
   color: var(--altmejd-primary);
-  font-size: 0.88em;
-  font-weight: 620;
+  font-size: 0.52em;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
 
 #title-slide .quarto-title-author-name {
-  font-weight: 620;
+  color: var(--altmejd-foreground);
+  font-weight: 680;
 }
 
-#title-slide .institute,
-#title-slide .date,
+#title-slide .date {
+  grid-row: 1;
+  grid-column: 2;
+  align-self: end;
+  margin: 0;
+  color: var(--altmejd-muted);
+  font-size: 0.52em;
+  font-weight: 520;
+  line-height: 1.2;
+}
+
+#title-slide .institute {
+  grid-row: 3;
+  grid-column: 1 / -1;
+  align-self: start;
+  margin: 0.75em 0 0;
+  color: var(--altmejd-muted);
+  font-size: 0.58em;
+}
+
 #title-slide .quarto-title-authors {
+  grid-row: 4;
+  grid-column: 1 / -1;
+  align-self: end;
+  gap: 0.65em 1.25em;
+  width: 100%;
+  margin: 0;
+  padding-top: 0.72em;
   color: var(--altmejd-muted);
   font-size: 0.7em;
+  border-top: 1px solid var(--altmejd-border);
+}
+
+#title-slide .quarto-title-author {
+  min-width: 0;
+}
+
+#title-slide .quarto-title-author-name {
+  margin: 0 0 0.18em;
+  line-height: 1.15;
+}
+
+#title-slide .quarto-title-affiliation {
+  display: inline;
+  margin: 0;
+  color: var(--altmejd-muted);
+  font-size: 0.72em;
+  line-height: 1.25;
+}
+
+#title-slide .quarto-title-affiliation:not(:last-child)::after {
+  content: ",";
+  display: inline-block;
+  // Quarto preserves trailing source whitespace inside each inline affiliation.
+  // Pull the separator over it; inter-element whitespace supplies the normal gap.
+  margin-right: 0;
+  margin-left: -0.25em;
+}
+
+// Four authors fit comfortably across the fixed 16:9 canvas. Keep the grid
+// narrower than the slide so names read as a group rather than edge labels.
+#title-slide
+  .quarto-title-authors:has(> .quarto-title-author:nth-child(4)):not(
+    :has(> .quarto-title-author:nth-child(5))
+  ) {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45em 1.4em;
+  width: 82%;
+  font-size: 0.6em;
+}
+
+// Five- and six-author teams use two compact rows without shrinking the text.
+#title-slide .quarto-title-authors:has(> .quarto-title-author:nth-child(5)) {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5em 1.4em;
+  width: 82%;
+  font-size: 0.62em;
 }
 
 // Use {.dark-bg} only when the author has chosen a genuinely dark background.
@@ -310,12 +411,25 @@ $code-bg: $altmejd-code-bg !default;
 
 // Section agendas are generated by default and can be configured in YAML.
 .reveal .slides section.agenda-slide {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 100%;
   color: var(--altmejd-agenda-foreground);
   background: var(--altmejd-agenda-background);
 }
 
 .reveal:not(.overview) .slides section.agenda-slide {
   box-shadow: 0 0 0 100vmax var(--altmejd-agenda-background);
+}
+
+// The footer belongs to content slides, not the cover or section dividers.
+// Reveal maintains `.present`, so this also works during normal-mode PDF capture.
+.reveal:has(.slides #title-slide.present) .footer,
+.reveal:has(.slides section.agenda-slide.present) .footer {
+  // Quarto loads its footer support stylesheet after the compiled theme.
+  display: none !important;
 }
 
 .reveal .slides section.agenda-slide > h1 {
@@ -331,10 +445,36 @@ $code-bg: $altmejd-code-bg !default;
 }
 
 .reveal .agenda-heading {
-  margin-bottom: 0.65em;
+  margin-bottom: 0.35em;
   color: var(--altmejd-agenda-foreground);
   font-size: 1.25em;
   font-weight: 650;
+}
+
+.reveal .agenda-heading > :only-child,
+.reveal .section-kicker > :only-child {
+  margin: 0;
+}
+
+.reveal .section-kicker {
+  max-width: 34em;
+  margin-bottom: 0.85em;
+  color: color-mix(in srgb, var(--altmejd-agenda-foreground) 82%, transparent);
+  font-size: 0.58em;
+  font-weight: 650;
+  line-height: 1.28;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.reveal .agenda {
+  display: grid;
+  gap: 0.32em;
+  width: min(100%, 42em);
+  min-height: 0;
+  font-size: 0.94em;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
 }
 
 .reveal .agenda ul,
@@ -346,14 +486,129 @@ $code-bg: $altmejd-code-bg !default;
   color: inherit;
 }
 
+.reveal .agenda > :is(div, ul, ol),
+.reveal .agenda > div > :only-child {
+  margin: 0;
+}
+
 .reveal .agenda-inactive {
-  opacity: 0.68;
+  color: color-mix(
+    in srgb,
+    var(--altmejd-agenda-foreground) 76%,
+    var(--altmejd-agenda-background)
+  );
+  font-weight: 560;
+  opacity: 1;
 }
 
 .reveal .agenda-active {
   color: #fff;
-  font-weight: 700;
+  font-weight: 560;
   opacity: 1;
+}
+
+// Compact, explicit navigation for back links and alternative specifications.
+.reveal .slide .slide-nav,
+.reveal .slide .slide-links {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 11;
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  gap: 0.4rem;
+  line-height: 1.15;
+}
+
+.reveal .slide .slide-nav > p,
+.reveal .slide .slide-links > p {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  max-width: 100%;
+  margin: 0;
+}
+
+// Link groups commonly use middle-dot text separators. The flex gap is the
+// separator now, so collapse raw text nodes while retaining the links.
+.reveal .slide .slide-nav > p,
+.reveal .slide .slide-links > p {
+  font-size: 0;
+}
+
+.reveal .slide :is(.slide-nav, .slide-links) a,
+.reveal .slide a.button,
+.reveal .slide .button > a {
+  display: inline-flex;
+  align-items: center;
+  column-gap: 0.16em;
+  min-height: 0;
+  padding: 0.32em 0.65em;
+  color: var(--altmejd-primary);
+  font-size: 15px;
+  font-weight: 560;
+  line-height: 1.15;
+  text-decoration: none;
+  background: color-mix(in srgb, var(--altmejd-surface) 46%, var(--altmejd-background));
+  border: 1px solid color-mix(in srgb, var(--altmejd-primary) 22%, var(--altmejd-border));
+  border-radius: 0.28em;
+  box-shadow: none;
+  transition:
+    color 120ms ease,
+    background-color 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.reveal .slide :is(.slide-nav, .slide-links) .primary > a,
+.reveal .slide :is(.slide-nav, .slide-links) a.primary {
+  color: var(--altmejd-background);
+  background: var(--altmejd-primary);
+  border-color: var(--altmejd-primary);
+}
+
+.reveal .slide :is(.slide-nav, .slide-links) :is(a.back, .back > a)::before {
+  content: "←";
+  margin-right: 0.32em;
+  font-size: 1.05em;
+  line-height: 1;
+}
+
+.reveal .slide :is(.slide-nav, .slide-links) a:hover {
+  color: var(--altmejd-primary);
+  background: color-mix(in srgb, var(--altmejd-primary) 7%, var(--altmejd-background));
+  border-color: color-mix(in srgb, var(--altmejd-primary) 38%, var(--altmejd-border));
+  box-shadow: none;
+}
+
+.reveal .slide :is(.slide-nav, .slide-links) .primary > a:hover,
+.reveal .slide :is(.slide-nav, .slide-links) a.primary:hover {
+  color: var(--altmejd-background);
+  background: color-mix(in srgb, var(--altmejd-primary) 82%, var(--altmejd-foreground));
+  border-color: transparent;
+  box-shadow: 0 2px 5px color-mix(in srgb, var(--altmejd-foreground) 16%, transparent);
+}
+
+.reveal .slide :is(.slide-nav, .slide-links) a:active,
+.reveal .slide a.button:active,
+.reveal .slide .button > a:active {
+  transform: translateY(1px);
+}
+
+.reveal .slide :is(.slide-nav, .slide-links) a:focus-visible,
+.reveal .slide a.button:focus-visible,
+.reveal .slide .button > a:focus-visible {
+  outline: 3px solid var(--altmejd-accent);
+  outline-offset: 2px;
 }
 
 // A top-level attribution remains part of its slide, so Reveal plugins such as
@@ -387,7 +642,7 @@ $code-bg: $altmejd-code-bg !default;
 .reveal .slide > aside:not(.notes) {
   position: absolute;
   right: 0;
-  bottom: 0;
+  bottom: var(--altmejd-navigation-reserve, 0px);
   left: 0;
   z-index: 10;
   box-sizing: border-box;
@@ -419,6 +674,31 @@ $code-bg: $altmejd-code-bg !default;
   margin-bottom: 0;
 }
 
+// The runtime measures bottom-edge components. Their reserve variables compose,
+// so content, navigation, asides, and handout notes never occupy the same space.
+.reveal .slide.has-altmejd-aside {
+  --altmejd-aside-reserve: calc(var(--altmejd-aside-height, 0px) + #{$altmejd-gap});
+}
+
+.reveal .slide.has-altmejd-navigation {
+  --altmejd-navigation-reserve: calc(
+    var(--altmejd-navigation-height, 0px) + #{$altmejd-gap}
+  );
+}
+
+.reveal .slide:is(.has-altmejd-aside, .has-altmejd-navigation, .has-handout-notes) {
+  box-sizing: border-box;
+  padding-bottom: calc(
+    var(--altmejd-aside-reserve, 0px) + var(--altmejd-navigation-reserve, 0px) +
+      var(--altmejd-handout-note-reserve, 0px)
+  );
+}
+
+.reveal .slide > :is(.r-stretch, .stretch) {
+  max-height: var(--altmejd-stretch-max-height, none) !important;
+  object-fit: contain;
+}
+
 // Small, opt-in layout API. These classes never change the global Reveal
 // section display mode.
 .reveal .slide.layout-fill {
@@ -434,6 +714,62 @@ $code-bg: $altmejd-code-bg !default;
 .reveal .slide.layout-fill > .fill-region {
   flex: 1 1 auto;
   min-height: 0;
+}
+
+.reveal .slide.layout-fill > .figure-panels {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+// The filter upgrades ordinary two-image Quarto columns to this layout. Authors
+// can also use `.figure-panels` explicitly with one or two panel children.
+.reveal .slide .figure-panels {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $altmejd-gap;
+  width: 100%;
+  min-height: 0;
+}
+
+.reveal .slide .figure-panels > :is(.column, .figure-panel) {
+  display: flex;
+  flex-direction: column;
+  width: 100% !important;
+  min-width: 0;
+  min-height: 0;
+}
+
+.reveal .slide .figure-panels > :only-child {
+  grid-column: 1 / -1;
+}
+
+.reveal .slide .figure-panels > :is(.column, .figure-panel) > :first-child:not(:has(img)) {
+  flex: 0 0 auto;
+  margin: 0 0 0.24em;
+  color: var(--altmejd-primary);
+  font-size: 0.72em;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.reveal .slide .figure-panels > :is(.column, .figure-panel) > p:has(> img:only-child),
+.reveal .slide .figure-panels > :is(.column, .figure-panel) > figure,
+.reveal .slide .figure-panels > :is(.column, .figure-panel) > .quarto-figure {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  margin: 0;
+}
+
+.reveal .slide .figure-panels > :is(.column, .figure-panel) > p > img:only-child,
+.reveal .slide .figure-panels > :is(.column, .figure-panel) figure img {
+  width: 100%;
+  max-width: 100%;
+  height: 100% !important;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .reveal .slide .layout-two-column {
@@ -471,35 +807,24 @@ $code-bg: $altmejd-code-bg !default;
   object-fit: contain;
 }
 
-// `?handout=true` exposes speaker notes and reserves their measured height.
-html.altmejd-handout .reveal .slide.has-handout-notes:not(.has-handout-aside) {
-  box-sizing: border-box;
-  padding-bottom: calc(var(--altmejd-handout-note-height, 0px) + #{$altmejd-gap});
-}
-
-html.altmejd-handout .reveal .slide.has-handout-aside:not(.has-handout-notes) {
-  box-sizing: border-box;
-  padding-bottom: calc(var(--altmejd-handout-aside-height, 0px) + #{$altmejd-gap});
-}
-
-html.altmejd-handout .reveal .slide.has-handout-notes.has-handout-aside {
-  box-sizing: border-box;
-  padding-bottom: calc(
-    var(--altmejd-handout-note-height, 0px) +
-    var(--altmejd-handout-aside-height, 0px) +
-    #{$altmejd-gap * 2}
+// `?handout=true` exposes speaker notes above the footer navigation row.
+html.altmejd-handout .reveal .slide.has-handout-notes {
+  --altmejd-handout-note-reserve: calc(
+    var(--altmejd-handout-note-height, 0px) + #{$altmejd-gap}
   );
 }
 
 html.altmejd-handout .reveal .slide.has-handout-notes > .aside,
 html.altmejd-handout .reveal .slide.has-handout-notes > aside:not(.notes) {
-  bottom: calc(var(--altmejd-handout-note-height, 0px) + #{$altmejd-gap});
+  bottom: calc(
+    var(--altmejd-handout-note-reserve, 0px) + var(--altmejd-navigation-reserve, 0px)
+  );
 }
 
 html.altmejd-handout .reveal .slide > aside.notes {
   position: absolute;
   right: 0;
-  bottom: 0;
+  bottom: var(--altmejd-navigation-reserve, 0px);
   left: 0;
   display: block !important;
   box-sizing: border-box;
@@ -530,8 +855,21 @@ html.altmejd-handout .reveal .slide > aside.notes > :last-child {
 @media (max-width: 700px) {
   .reveal .slide .layout-two-column,
   .reveal .slide .layout-two-column.layout-30-70,
-  .reveal .slide .layout-two-column.layout-70-30 {
+  .reveal .slide .layout-two-column.layout-70-30,
+  .reveal .slide .figure-panels {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .reveal .slide .figure-panels > :only-child {
+    grid-column: auto;
+  }
+}
+
+@media print {
+  .reveal .slide :is(.slide-nav, .slide-links) a,
+  .reveal .slide a.button,
+  .reveal .slide .button > a {
+    transform: none !important;
   }
 }
 
