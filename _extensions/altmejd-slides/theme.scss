@@ -390,7 +390,9 @@ $code-bg: $altmejd-code-bg !default;
   );
 }
 
-// A quiet source note tucked under a centered table.
+// A quiet source note tucked under a centered table. A standalone note keeps
+// this centered clamp; the Lua filter pairs a note that directly follows a
+// table into a `.table-with-note` wrapper, which overrides the clamp below.
 .reveal .slide .table-note {
   width: fit-content;
   max-width: min(100%, 30em);
@@ -403,6 +405,31 @@ $code-bg: $altmejd-code-bg !default;
 
 .reveal .slide .table-note p {
   margin: 0;
+}
+
+// The shared wrapper shrinks to the table, so the note can span exactly the
+// table's rendered width. The width: 0 / min-width: 100% pair keeps a long
+// one-line note from widening the fit-content wrapper past the table.
+.reveal .slide .table-with-note {
+  width: fit-content;
+  margin-inline: auto;
+}
+
+.reveal .slide .table-with-note .table-note {
+  width: 0;
+  min-width: 100%;
+  max-width: none;
+  margin-inline: 0;
+  container-type: inline-size;
+}
+
+// A note as wide as a wide table reads better ragged-right; under a narrow
+// table the short centered line still looks like a caption. 30em matches the
+// standalone clamp (both resolve against the note's 0.5em type size).
+@container (min-width: 30em) {
+  .reveal .slide .table-with-note .table-note p {
+    text-align: left;
+  }
 }
 
 // The "circle the coefficient" move: an accent chip on the key value in a

@@ -376,6 +376,22 @@ div, and the boxed coefficient above is `[0.18]{.emph}`.
 [Alternative outcome](#appendix-alternative)
 :::
 
+## Heterogeneity by baseline schedule {#heterogeneity}
+
+| Subgroup, by baseline schedule flexibility | Estimate | Standard error | Share of sample |
+|:-------------------------------------------|---------:|---------------:|----------------:|
+| Inflexible schedule (work or care obligations) | [0.27]{.emph} | 0.09 | 31% |
+| Partially flexible schedule | 0.16 | 0.07 | 42% |
+| Fully flexible schedule | 0.09 | 0.08 | 27% |
+
+::: {.table-note}
+Estimates come from the baseline specification interacted with the
+schedule-flexibility indicator recorded at application; standard errors are
+clustered by student. A wide table like this one shows how a paired
+`.table-note` spans the full table width and left-aligns instead of wrapping
+into a narrow centered stack.
+:::
+
 ## What the design identifies {.dark-bg background-color="#1e293b" #design-identifies}
 
 > Near the threshold, access changes sharply while observed student

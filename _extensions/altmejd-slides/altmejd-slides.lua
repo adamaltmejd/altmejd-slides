@@ -604,6 +604,23 @@ local function stretch_aside_figures(blocks)
   return output
 end
 
+-- A `.table-note` div is a sibling of the table it annotates, so CSS alone
+-- cannot size the note to the table's rendered width. Pair the two in a
+-- shared fit-content wrapper; the note then spans exactly the table.
+local function wraps_table(block)
+  if block.t == "Table" then
+    return true
+  end
+  if block.t == "Div" or block.t == "Figure" then
+    for _, child in ipairs(block.content) do
+      if wraps_table(child) then
+        return true
+      end
+    end
+  end
+  return false
+end
+
 local function enrich_research_layouts(blocks)
   local output = pandoc.List()
   local current_slide = nil
@@ -612,6 +629,15 @@ local function enrich_research_layouts(blocks)
     block = label_back_controls(block)
     if block.t == "Header" and block.level <= 2 then
       current_slide = block.level == 2 and block or nil
+    elseif block.t == "Div"
+      and block.classes:includes("table-note")
+      and #output > 0
+      and wraps_table(output[#output])
+    then
+      block = pandoc.Div(
+        { output:remove(#output), block },
+        pandoc.Attr("", { "table-with-note" })
+      )
     elseif current_slide ~= nil and is_figure_panels(block) then
       if not block.classes:includes("figure-panels") then
         block.classes:insert("figure-panels")

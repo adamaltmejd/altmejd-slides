@@ -75,6 +75,7 @@ async function auditShowcase(page, url, mode) {
     const agendaFailures = [];
     const panelFailures = [];
     const noteFailures = [];
+    const tableNoteFailures = [];
 
     for (const slide of slides) {
       await waitForSlide(slide);
@@ -210,6 +211,27 @@ async function auditShowcase(page, url, mode) {
         }
       }
 
+      // A paired note spans exactly its table and goes ragged-right once it
+      // is wider than the 30em clamp. Offset widths are layout pixels, so
+      // the threshold mirrors the container query under Reveal's scaling.
+      for (const pair of slide.querySelectorAll(".table-with-note")) {
+        const table = pair.querySelector("table");
+        const pairedNote = pair.querySelector(".table-note");
+        const paragraph = pairedNote?.querySelector("p");
+        const noteFont = pairedNote ? parseFloat(getComputedStyle(pairedNote).fontSize) : 0;
+        const wide = pairedNote ? pairedNote.offsetWidth >= 30 * noteFont : false;
+        if (
+          !table ||
+          !pairedNote ||
+          !paragraph ||
+          Math.abs(pairedNote.offsetWidth - table.offsetWidth) > 2 ||
+          Math.abs(rect(pairedNote).left - rect(table).left) > 2 ||
+          getComputedStyle(paragraph).textAlign !== (wide ? "left" : "center")
+        ) {
+          tableNoteFailures.push(slide.id || "(untitled)");
+        }
+      }
+
       if (handout) {
         const hiddenFragments = Array.from(slide.querySelectorAll(".fragment")).filter(
           (fragment) => !fragment.classList.contains("visible"),
@@ -284,6 +306,8 @@ async function auditShowcase(page, url, mode) {
         globalThis.Reveal.hasPlugin("slide-remote") &&
         document.querySelector('meta[name="slide-remote-worker-url"]')?.content === "",
       slides: slides.length,
+      tableNoteFailures,
+      tableNotes: document.querySelectorAll(".slides .table-with-note").length,
       scrollView: globalThis.Reveal.isScrollView(),
       scrollActivationWidth: globalThis.Reveal.getConfig().scrollActivationWidth,
       titleFits: title.scrollHeight <= title.clientHeight + 2,
@@ -305,13 +329,15 @@ function assertAudit(name, audit, expectedHandout) {
     noteFailures: audit.noteFailures,
     overflow: audit.overflow,
     panelFailures: audit.panelFailures,
+    tableNoteFailures: audit.tableNoteFailures,
     remoteResources: audit.remoteResources,
     slideRemoteLoaded: !audit.slideRemoteLoaded,
     scrollView: audit.scrollView,
     titleFits: !audit.titleFits,
     wrongFeatureCounts:
-      audit.slides !== 35 ||
+      audit.slides !== 36 ||
       audit.agendas !== 5 ||
+      audit.tableNotes !== 2 ||
       audit.authorCount !== 4 ||
       audit.images < 16 ||
       audit.internalLinks < 22 ||
