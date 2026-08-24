@@ -40,6 +40,19 @@ The current showcase is published at
 It uses the real extension but deliberately leaves Slide Remote unconfigured,
 so opening the public preview does not allocate a remote-control session.
 
+## Publish a talk
+
+Decks publish deliberately to `https://slides.altmejd.se/<slug>/` with
+
+```sh
+make publish
+```
+
+Each talk becomes its own Cloudflare Static Assets Worker behind a shared
+gateway domain, so republishing one talk never touches another, and rendering
+or previewing never deploys anything. Setup, authentication, rollback, and
+deletion are documented in [docs/publishing.md](docs/publishing.md).
+
 ## Configure it
 
 The built-in palette and automatic section agendas are defaults. A deck can
