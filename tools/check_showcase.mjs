@@ -433,6 +433,70 @@ try {
   }
   await counterPage.close();
 
+  // Regression: under a 3D transition (convex/concave) the runtime used to
+  // measure the incoming slide mid-rotation and clamp stretched images to a
+  // zero max-height that nothing corrected. Walk the whole deck with convex
+  // transitions and require every loaded image to keep a positive height once
+  // the slide settles.
+  const transitionPage = await newAuditPage({ width: 1600, height: 900 });
+  await transitionPage.goto(deckUrl.href, { waitUntil: "domcontentloaded" });
+  await transitionPage.waitForFunction(() => globalThis.Reveal?.isReady());
+  const collapsedImages = await transitionPage.evaluate(async () => {
+    globalThis.Reveal.configure({ transition: "convex" });
+    const problems = [];
+    const check = () => {
+      const slide = globalThis.Reveal.getCurrentSlide();
+      for (const img of slide.querySelectorAll("img")) {
+        const rect = img.getBoundingClientRect();
+        // A collapsed stretch image keeps its width; images hidden by
+        // fragments or note containers lose both dimensions.
+        if (img.complete && img.naturalWidth > 0 && rect.width > 4 && rect.height < 4) {
+          problems.push({
+            slide: slide.id || "(anonymous)",
+            src: (img.currentSrc || img.src).split("/").pop(),
+          });
+        }
+      }
+    };
+    const nextSettled = async () => {
+      let settled;
+      const transitionDone = new Promise((resolve) => {
+        settled = () => {
+          globalThis.Reveal.off("slidetransitionend", settled);
+          resolve();
+        };
+        globalThis.Reveal.on("slidetransitionend", settled);
+        setTimeout(settled, 1500);
+      });
+      const before = globalThis.Reveal.getIndices();
+      globalThis.Reveal.next();
+      const after = globalThis.Reveal.getIndices();
+      const slideChanged = before.h !== after.h || before.v !== after.v;
+      if (slideChanged) {
+        await transitionDone;
+      }
+      // Let the runtime's queued double-rAF measurement land before checking.
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      return slideChanged || before.f !== after.f;
+    };
+    check();
+    for (let step = 0; step < 400; step++) {
+      const moved = await nextSettled();
+      if (!moved) {
+        break;
+      }
+      check();
+    }
+    return problems;
+  });
+  if (collapsedImages.length > 0) {
+    throw new Error(
+      `images collapsed to zero height under convex transition: ${JSON.stringify(collapsedImages)}`,
+    );
+  }
+  await transitionPage.close();
+
   deckUrl.search = "?pdf=handout&handout=true&pdfSeparateFragments=false";
   const handoutPage = await newAuditPage({ width: 1600, height: 900 });
   const handout = await auditShowcase(handoutPage, deckUrl.href, {

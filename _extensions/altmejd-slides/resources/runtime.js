@@ -99,9 +99,33 @@
     );
   };
 
+  // During Reveal's 3D transitions (convex, concave, zoom) the incoming slide
+  // is measured while rotated or scaled, so getBoundingClientRect() disagrees
+  // with layout size and the reserved heights come out garbage — collapsing
+  // stretched images to zero. Detect the distortion and wait for the
+  // slidetransitionend re-measure instead.
+  const isMidTransition = (slide) => {
+    if (slide.offsetWidth === 0) {
+      // Hidden or not laid out: every rect is zero and the overlap math
+      // would clamp stretched media to nothing.
+      return true;
+    }
+    const scale = window.Reveal?.getScale?.() || 1;
+    const rect = slide.getBoundingClientRect();
+    const width = slide.offsetWidth * scale;
+    const height = slide.offsetHeight * scale;
+    return (
+      Math.abs(rect.width - width) > width * 0.02 ||
+      (height > 0 && Math.abs(rect.height - height) > height * 0.02)
+    );
+  };
+
   const updateSlide = (slide) => {
     if (!slide) {
       return;
+    }
+    if (isMidTransition(slide)) {
+      return false;
     }
 
     const aside = directAside(slide);
@@ -121,21 +145,20 @@
     });
   };
 
-  const updateCurrentSlide = () => {
-    if (window.Reveal && typeof window.Reveal.getCurrentSlide === "function") {
-      updateSlide(window.Reveal.getCurrentSlide());
-    }
-  };
-
   let frame = null;
-  const queueUpdate = (slide) => {
+  const queueUpdate = (slide, attempt = 0) => {
     if (frame !== null) {
       cancelAnimationFrame(frame);
     }
     frame = requestAnimationFrame(() => {
       frame = requestAnimationFrame(() => {
         frame = null;
-        updateSlide(slide ?? window.Reveal?.getCurrentSlide?.());
+        const skipped = updateSlide(slide ?? window.Reveal?.getCurrentSlide?.()) === false;
+        // A skipped measurement outside a CSS transition (a fullscreen or
+        // resize re-layout race) gets no slidetransitionend; retry briefly.
+        if (skipped && attempt < 8) {
+          setTimeout(() => queueUpdate(slide, attempt + 1), 150);
+        }
       });
     });
   };
@@ -156,7 +179,15 @@
     // on phones until Quarto exposes a reliable format-level override.
     window.Reveal.configure({ scrollActivationWidth: 0 });
 
-    const resizeObserver = new ResizeObserver(updateCurrentSlide);
+    // Measure synchronously so late-loading media is reflected before the
+    // caller's next frame; fall back to the queue (which retries) only when
+    // the slide's geometry is distorted mid-transition.
+    const resizeObserver = new ResizeObserver(() => {
+      const slide = window.Reveal?.getCurrentSlide?.();
+      if (slide && updateSlide(slide) === false) {
+        queueUpdate(slide);
+      }
+    });
     const observeSlideBoxes = (slide) => {
       resizeObserver.disconnect();
       const aside = directAside(slide);
@@ -196,6 +227,11 @@
     });
     window.Reveal.on("slidechanged", (event) => {
       observeSlideBoxes(event.currentSlide);
+      queueUpdate(event.currentSlide);
+    });
+    // Animated transitions settle after slidechanged; measure again once the
+    // slide's geometry is final. Fires only when a CSS transition actually ran.
+    window.Reveal.on("slidetransitionend", (event) => {
       queueUpdate(event.currentSlide);
     });
 
