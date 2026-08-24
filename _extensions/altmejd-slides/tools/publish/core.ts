@@ -114,6 +114,52 @@ export function resolveInput(
   };
 }
 
+export interface PublishArtifact {
+  name: string;
+  source: string;
+  target: string;
+}
+
+const TARGET_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+// Extra files published beside the deck, e.g. a slides PDF. Every artifact is
+// individually opted in through configuration; nothing is published
+// implicitly. Targets are validated as safe relative paths under the slug.
+export function resolveArtifacts(raw: unknown): PublishArtifact[] | ResolveError {
+  if (raw === undefined || raw === null) {
+    return [];
+  }
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    return { error: "publish.cloudflare.artifacts must be a mapping of name to {source, target}" };
+  }
+  const artifacts: PublishArtifact[] = [];
+  for (const [name, value] of Object.entries(raw as Record<string, unknown>)) {
+    const entry = (value ?? {}) as Record<string, unknown>;
+    const source = typeof entry.source === "string" ? entry.source.trim() : "";
+    if (source === "") {
+      return { error: `artifact "${name}" needs a source path` };
+    }
+    if (source.startsWith("/") || source.split(/[/\\]/).includes("..")) {
+      return { error: `artifact "${name}" source must be a relative path inside the project` };
+    }
+    const fallback = source.split(/[/\\]/).pop() ?? "";
+    const target = typeof entry.target === "string" ? entry.target.trim() : fallback;
+    const segments = target.split("/");
+    if (target === "" || !segments.every((segment) => TARGET_SEGMENT.test(segment))) {
+      return {
+        error:
+          `artifact "${name}" target "${target}" is invalid: ` +
+          "use relative path segments of letters, digits, dot, dash, underscore",
+      };
+    }
+    if (target === "index.html") {
+      return { error: `artifact "${name}" target may not replace the deck's index.html` };
+    }
+    artifacts.push({ name, source, target });
+  }
+  return artifacts.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export function workerName(slug: string): string {
   return `${WORKER_PREFIX}${slug}`;
 }

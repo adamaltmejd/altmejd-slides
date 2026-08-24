@@ -17,8 +17,10 @@ import {
   deriveZone,
   gatewayWorkerScript,
   gatewayWranglerConfig,
+  type PublishArtifact,
   planStaging,
   publicUrl,
+  resolveArtifacts,
   resolveInput,
   resolveTarget,
   workerName,
@@ -190,6 +192,7 @@ async function resolveWrangler(): Promise<string[]> {
 
 async function inspectDeck(input: string): Promise<{
   outputFile: string;
+  outputDir: string;
   cloudflareMeta: Record<string, unknown> | undefined;
 }> {
   const result = await run(["quarto", "inspect", input], { capture: true });
@@ -218,7 +221,16 @@ async function inspectDeck(input: string): Promise<{
   const extension = (metadata["altmejd-slides"] ?? {}) as Record<string, unknown>;
   const publish = (extension.publish ?? {}) as Record<string, unknown>;
   const cloudflareMeta = publish.cloudflare as Record<string, unknown> | undefined;
-  return { outputFile, cloudflareMeta };
+  // A Quarto project renders into project.output-dir (e.g. _site), not next
+  // to the source; standalone decks report no project config and use ".".
+  const project = (inspected.project ?? {}) as Record<string, unknown>;
+  const projectConfig = ((project.config ?? {}) as Record<string, unknown>).project as
+    | Record<string, unknown>
+    | undefined;
+  const rawOutputDir = projectConfig?.["output-dir"];
+  const outputDir =
+    typeof rawOutputDir === "string" && rawOutputDir.trim() !== "" ? rawOutputDir.trim() : ".";
+  return { outputFile, outputDir, cloudflareMeta };
 }
 
 // The default slug source: the deck repository's directory name, from the git
@@ -274,12 +286,21 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
+interface DeckRecord {
+  worker: string;
+  host: string;
+  zone?: string;
+  contentHash: string;
+  published: string;
+  // "pending": deployed but the public URL never answered (e.g. DNS still
+  // propagating); retried on the next publish without requiring --adopt.
+  // Absent means verified (records written by v0.5.0).
+  verification?: "ok" | "pending" | "skipped";
+}
+
 interface PublishState {
   version: 1;
-  decks: Record<
-    string,
-    { worker: string; host: string; zone?: string; contentHash: string; published: string }
-  >;
+  decks: Record<string, DeckRecord>;
 }
 
 async function readState(): Promise<PublishState> {
@@ -347,30 +368,48 @@ async function workerExists(wrangler: string[], name: string): Promise<boolean> 
   );
 }
 
-async function verifyPublished(url: string): Promise<void> {
-  const attempts = 6;
+function envNumber(name: string, fallback: number): number {
+  const value = Number(Deno.env.get(name));
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+// ALTMEJD_SLIDES_VERIFY_BASE redirects verification to another origin (test
+// fixtures); ATTEMPTS/DELAY_MS tune the wait for slow DNS propagation.
+function verifyUrl(target: CloudflareTarget): string {
+  const base = Deno.env.get("ALTMEJD_SLIDES_VERIFY_BASE");
+  if (base !== undefined && base.trim() !== "") {
+    return `${base.trim().replace(/\/+$/, "")}/${target.slug}/`;
+  }
+  return publicUrl(target);
+}
+
+async function verifyPublished(url: string): Promise<boolean> {
+  const attempts = envNumber("ALTMEJD_SLIDES_VERIFY_ATTEMPTS", 6);
+  const delayMs = envNumber("ALTMEJD_SLIDES_VERIFY_DELAY_MS", 5000);
   for (let attempt = 1; attempt <= attempts; attempt++) {
     try {
       const response = await fetch(url, { redirect: "follow" });
       const body = await response.text();
       if (response.ok && /reveal/i.test(body)) {
         console.log(`verified: ${url} serves the deck (HTTP ${response.status})`);
-        return;
+        return true;
       }
       console.error(`attempt ${attempt}/${attempts}: HTTP ${response.status} from ${url}`);
     } catch (error) {
       console.error(`attempt ${attempt}/${attempts}: ${(error as Error).message}`);
     }
     if (attempt < attempts) {
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
-  fail(`published deck did not become reachable at ${url}`);
+  return false;
 }
 
 async function stageDeck(
-  outputFile: string,
+  entryHtml: string,
+  baseDir: string,
   target: CloudflareTarget,
+  artifacts: readonly PublishArtifact[],
   stagingDir: string,
 ): Promise<string> {
   const publicDir = `${stagingDir}/public`;
@@ -379,78 +418,100 @@ async function stageDeck(
   await Deno.remove(publicDir, { recursive: true }).catch(() => {});
   await Deno.mkdir(deckDir, { recursive: true });
 
-  const html = await Deno.readTextFile(outputFile);
+  // References in the HTML are relative to the rendered output directory
+  // (project.output-dir for Quarto projects, the source directory otherwise).
+  const fromBase = (ref: string): string => (baseDir === "." ? ref : `${baseDir}/${ref}`);
+  const entryName = entryHtml.split("/").pop() ?? entryHtml;
+
+  const html = await Deno.readTextFile(entryHtml);
   await Deno.writeTextFile(`${deckDir}/index.html`, html);
 
   const refs = collectAssetRefs(html);
   const plan = planStaging(refs);
   if (plan.outside.length > 0) {
     fail(
-      "these references leave the deck directory and cannot be published:\n  " +
+      "these references leave the output directory and cannot be published:\n  " +
         plan.outside.join("\n  "),
     );
   }
   for (const dir of plan.directories) {
-    if (!(await exists(dir))) {
-      fail(`referenced directory is missing: ${dir}`);
+    if (!(await exists(fromBase(dir)))) {
+      fail(`referenced directory is missing: ${fromBase(dir)}`);
     }
-    await copyDir(dir, `${deckDir}/${dir}`);
+    await copyDir(fromBase(dir), `${deckDir}/${dir}`);
   }
   for (const file of plan.files) {
-    if (file === outputFile) {
+    if (file === entryName) {
       continue; // the entry document is already staged as index.html
     }
-    if (!(await exists(file))) {
-      fail(`referenced file is missing: ${file}`);
+    if (!(await exists(fromBase(file)))) {
+      fail(`referenced file is missing: ${fromBase(file)}`);
     }
-    await Deno.copyFile(file, `${deckDir}/${file}`);
+    await Deno.copyFile(fromBase(file), `${deckDir}/${file}`);
   }
 
   // Top-level stylesheets can reference images and fonts the HTML scan
   // cannot see; stage one level of their url()/@import targets too.
   const cssRefs = new Set<string>();
   for (const file of plan.files) {
-    if (!file.toLowerCase().endsWith(".css")) {
+    if (file === entryName || !file.toLowerCase().endsWith(".css")) {
       continue;
     }
-    for (const ref of collectCssRefs(await Deno.readTextFile(file))) {
+    for (const ref of collectCssRefs(await Deno.readTextFile(fromBase(file)))) {
       cssRefs.add(ref);
     }
   }
   const cssPlan = planStaging([...cssRefs]);
   if (cssPlan.outside.length > 0) {
     fail(
-      "stylesheet references leave the deck directory and cannot be published:\n  " +
+      "stylesheet references leave the output directory and cannot be published:\n  " +
         cssPlan.outside.join("\n  "),
     );
   }
   for (const dir of cssPlan.directories) {
     if (!plan.directories.includes(dir)) {
-      if (!(await exists(dir))) {
-        fail(`directory referenced from a stylesheet is missing: ${dir}`);
+      if (!(await exists(fromBase(dir)))) {
+        fail(`directory referenced from a stylesheet is missing: ${fromBase(dir)}`);
       }
-      await copyDir(dir, `${deckDir}/${dir}`);
+      await copyDir(fromBase(dir), `${deckDir}/${dir}`);
     }
   }
   for (const file of cssPlan.files) {
-    if (!plan.files.includes(file) && (await exists(file))) {
-      await Deno.copyFile(file, `${deckDir}/${file}`);
+    if (!plan.files.includes(file) && (await exists(fromBase(file)))) {
+      await Deno.copyFile(fromBase(file), `${deckDir}/${file}`);
     }
   }
 
   // Every scanned reference must resolve inside the staged tree.
   const missing: string[] = [];
   for (const ref of [...refs, ...cssRefs]) {
-    if (ref !== outputFile && !(await exists(`${deckDir}/${ref}`))) {
+    if (ref !== entryName && !(await exists(`${deckDir}/${ref}`))) {
       missing.push(ref);
     }
   }
   if (missing.length > 0) {
     fail(`staged deck is missing referenced assets:\n  ${missing.join("\n  ")}`);
   }
+
+  // Configured artifacts (e.g. a slides PDF) are staged beside the deck.
+  // Sources are project-root relative; the publisher never builds them.
+  for (const artifact of artifacts) {
+    if (!(await exists(artifact.source))) {
+      fail(
+        `artifact "${artifact.name}" source does not exist: ${artifact.source}\n` +
+          "(the publisher stages existing files; build the PDF before publishing)",
+      );
+    }
+    const targetPath = `${deckDir}/${artifact.target}`;
+    const parent = targetPath.slice(0, targetPath.lastIndexOf("/"));
+    await Deno.mkdir(parent, { recursive: true });
+    await Deno.copyFile(artifact.source, targetPath);
+    console.log(`artifact ${artifact.name}: ${publicUrl(target)}${artifact.target}`);
+  }
+
   console.log(
-    `staged ${plan.directories.length + cssPlan.directories.length} directories and ` +
-      `${plan.files.length + 1} files under ${target.slug}/`,
+    `staged ${plan.directories.length + cssPlan.directories.length} directories, ` +
+      `${plan.files.length + 1} files, and ${artifacts.length} artifacts under ${target.slug}/`,
   );
   return publicDir;
 }
@@ -487,8 +548,23 @@ async function deployDeck(opts: Options, target: CloudflareTarget, stagingDir: s
     known.host === target.host &&
     known.zone === target.zone;
   if (unchanged && !opts.force) {
-    console.log(`content unchanged since the last publish of "${target.slug}"; skipping deploy`);
-    console.log(`(use --force to deploy anyway)\n\npublished at: ${publicUrl(target)}`);
+    // A deployment whose verification never succeeded (e.g. DNS was still
+    // propagating) is retried here without redeploying unchanged content.
+    if (known.verification === "pending" && !opts.noVerify) {
+      console.log(`content unchanged; retrying the pending verification of "${target.slug}"`);
+      if (!(await verifyPublished(verifyUrl(target)))) {
+        fail(
+          `published deck is still not reachable at ${publicUrl(target)} ` +
+            "(DNS may still be propagating; rerun `make publish` later to retry)",
+        );
+      }
+      known.verification = "ok";
+      await writeState(state);
+    } else {
+      console.log(`content unchanged since the last publish of "${target.slug}"; skipping deploy`);
+      console.log("(use --force to deploy anyway)");
+    }
+    console.log(`\npublished at: ${publicUrl(target)}`);
     return;
   }
 
@@ -498,20 +574,31 @@ async function deployDeck(opts: Options, target: CloudflareTarget, stagingDir: s
     fail(`wrangler deploy failed with exit code ${deploy.code}`);
   }
 
-  // Verify before recording: a failed verification must leave the state
-  // unchanged so the next publish deploys and verifies again.
-  if (!opts.noVerify) {
-    await verifyPublished(publicUrl(target));
-  }
-
-  state.decks[target.slug] = {
+  // Record the deployment immediately so a failed verification never strands
+  // a Worker this project owns behind the --adopt guard; verification is
+  // finalized (or retried on the next run) via the verification field.
+  const record: DeckRecord = {
     worker: name,
     host: target.host,
     zone: target.zone,
     contentHash,
     published: new Date().toISOString(),
+    verification: opts.noVerify ? "skipped" : "pending",
   };
+  state.decks[target.slug] = record;
   await writeState(state);
+
+  if (!opts.noVerify) {
+    if (!(await verifyPublished(verifyUrl(target)))) {
+      fail(
+        `published deck did not become reachable at ${publicUrl(target)}\n` +
+          "The deployment itself succeeded and was recorded; once DNS has " +
+          "propagated, rerun `make publish` to retry verification without redeploying.",
+      );
+    }
+    record.verification = "ok";
+    await writeState(state);
+  }
   console.log(`\npublished at: ${publicUrl(target)}`);
 }
 
@@ -563,7 +650,31 @@ async function bootstrapGateway(opts: Options): Promise<void> {
     if (deploy.code !== 0) {
       fail(`wrangler deploy failed with exit code ${deploy.code}`);
     }
-    console.log(`gateway ready: https://${host}/ now falls back to redirects and 404s`);
+    console.log(`gateway deployed: https://${host}/ now falls back to redirects and 404s`);
+    // The Custom Domain's DNS record can lag behind the deploy; report
+    // readiness separately so a slow resolver is not mistaken for failure.
+    const attempts = envNumber("ALTMEJD_SLIDES_VERIFY_ATTEMPTS", 6);
+    const delayMs = envNumber("ALTMEJD_SLIDES_VERIFY_DELAY_MS", 5000);
+    let reachable = false;
+    for (let attempt = 1; attempt <= attempts && !reachable; attempt++) {
+      try {
+        await fetch(`https://${host}/`, { redirect: "manual" });
+        reachable = true; // any HTTP answer means DNS and the domain resolve
+      } catch {
+        if (attempt < attempts) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
+    }
+    if (reachable) {
+      console.log(`custom domain answers: https://${host}/ is live`);
+    } else {
+      console.log(
+        `custom domain not reachable yet: the DNS record for ${host} is created ` +
+          "but may take minutes to propagate; publishing works meanwhile and " +
+          "verification can be retried with `make publish`.",
+      );
+    }
   } finally {
     if (!opts.keepStaging) {
       await Deno.remove(stagingDir, { recursive: true }).catch(() => {});
@@ -581,7 +692,7 @@ async function publish(opts: Options): Promise<void> {
     fail(`input does not exist: ${input}`);
   }
 
-  const { outputFile, cloudflareMeta } = await inspectDeck(input);
+  const { outputFile, outputDir, cloudflareMeta } = await inspectDeck(input);
   const metadata = {
     ...cloudflareMeta,
     ...(opts.host !== undefined ? { host: opts.host } : {}),
@@ -595,20 +706,25 @@ async function publish(opts: Options): Promise<void> {
   if ("error" in target) {
     fail(target.error);
   }
+  const artifacts = resolveArtifacts(metadata.artifacts);
+  if (!Array.isArray(artifacts)) {
+    fail(artifacts.error);
+  }
   console.log(`publishing ${input} to ${publicUrl(target)}`);
 
   const render = await run(["quarto", "render", input]);
   if (render.code !== 0) {
     fail(`quarto render ${input} failed with exit code ${render.code}`);
   }
-  if (!(await exists(outputFile))) {
-    fail(`render did not produce ${outputFile}`);
+  const entryHtml = outputDir === "." ? outputFile : `${outputDir}/${outputFile}`;
+  if (!(await exists(entryHtml))) {
+    fail(`render did not produce ${entryHtml}`);
   }
 
   const stagingDir = opts.stagingDir ?? (await Deno.makeTempDir({ prefix: "altmejd-publish-" }));
   await Deno.mkdir(stagingDir, { recursive: true });
   try {
-    await stageDeck(outputFile, target, stagingDir);
+    await stageDeck(entryHtml, outputDir, target, artifacts, stagingDir);
     if (opts.stageOnly) {
       console.log(`stage-only: deck staged in ${stagingDir}, nothing deployed`);
       opts.keepStaging = true;

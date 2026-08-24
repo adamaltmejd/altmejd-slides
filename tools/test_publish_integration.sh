@@ -7,7 +7,8 @@ set -euo pipefail
 repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
 publisher="$repo_dir/_extensions/altmejd-slides/tools/publish-cloudflare.ts"
 work_dir="$(mktemp -d "${TMPDIR:-/tmp}/altmejd-publish-test.XXXXXX")"
-trap 'rm -rf "$work_dir"' EXIT
+server_pid=""
+trap '[ -n "$server_pid" ] && kill "$server_pid" 2>/dev/null; rm -rf "$work_dir"' EXIT
 
 fail() {
   echo "FAIL: $1" >&2
@@ -204,5 +205,129 @@ c = json.load(open(sys.argv[1]))
 assert c["name"] == "altmejd-slides-gateway"
 assert c["routes"] == [{"pattern": "slides.example.test", "custom_domain": True}]
 PY
+
+# --- Quarto project with output-dir, plus artifact publishing ---------------
+outdir_proj="$work_dir/outdir-proj"
+mkdir -p "$outdir_proj/fig-web"
+printf 'project:\n  output-dir: _site\n' >"$outdir_proj/_quarto.yml"
+cat >"$outdir_proj/talk.qmd" <<'QMD'
+---
+title: "OutDir Fixture"
+format: revealjs
+altmejd-slides:
+  publish:
+    cloudflare:
+      host: slides.example.test
+      slug: outdir26
+      artifacts:
+        presentation-pdf:
+          source: slides-src.pdf
+          target: slides.pdf
+---
+
+## One
+
+![](fig-web/dot.svg)
+QMD
+printf '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"/>' \
+  >"$outdir_proj/fig-web/dot.svg"
+printf '%%PDF-1.4 fake\n' >"$outdir_proj/slides-src.pdf"
+(cd "$outdir_proj" &&
+  quarto run "$publisher" --stage-only --staging-dir "$outdir_proj/staging") ||
+  fail "output-dir stage-only exited non-zero"
+test -f "$outdir_proj/staging/public/outdir26/index.html" ||
+  fail "output-dir project entry not staged as index.html"
+test -d "$outdir_proj/staging/public/outdir26/talk_files" ||
+  fail "output-dir project _files tree not staged"
+test -f "$outdir_proj/staging/public/outdir26/fig-web/dot.svg" ||
+  fail "output-dir project asset directory not staged"
+test -f "$outdir_proj/staging/public/outdir26/slides.pdf" ||
+  fail "configured artifact not staged at its target"
+
+# A configured artifact whose source is missing must fail loudly.
+rm "$outdir_proj/slides-src.pdf"
+if (cd "$outdir_proj" &&
+  quarto run "$publisher" --stage-only --staging-dir "$outdir_proj/staging2") \
+  >"$work_dir/artifact-missing.log" 2>&1; then
+  fail "missing artifact source did not fail the publish"
+fi
+grep -q 'artifact "presentation-pdf" source does not exist' "$work_dir/artifact-missing.log" ||
+  fail "missing-artifact failure lacked a clear message"
+
+# --- deploy succeeds, verification fails, retry recovers without --adopt ----
+verify_deck="$work_dir/verify-deck"
+mkdir -p "$verify_deck"
+cat >"$verify_deck/talk.qmd" <<'QMD'
+---
+title: "Verify Fixture"
+format: revealjs
+altmejd-slides:
+  publish:
+    cloudflare:
+      host: slides.example.test
+      slug: verify26
+---
+
+## One
+
+Content.
+QMD
+verify_staging="$work_dir/verify-staging"
+: >"$FAKE_WRANGLER_LOG"
+if (cd "$verify_deck" &&
+  ALTMEJD_SLIDES_VERIFY_BASE="http://127.0.0.1:1" \
+    ALTMEJD_SLIDES_VERIFY_ATTEMPTS=1 ALTMEJD_SLIDES_VERIFY_DELAY_MS=1 \
+    quarto run "$publisher" --keep-staging --staging-dir "$verify_staging") \
+  >"$work_dir/verify-fail.log" 2>&1; then
+  fail "publish with unreachable verification URL did not exit non-zero"
+fi
+grep -q " deploy " "$FAKE_WRANGLER_LOG" || fail "deploy did not happen before verification"
+python3 - "$verify_deck/.altmejd-slides-publish.json" <<'PY' || fail "failed verify not recorded as pending"
+import json, sys
+s = json.load(open(sys.argv[1]))
+assert s["decks"]["verify26"]["verification"] == "pending"
+PY
+
+python3 -c '
+import functools, http.server, socketserver, sys
+handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=sys.argv[1])
+socketserver.TCPServer.allow_reuse_address = True
+with socketserver.TCPServer(("127.0.0.1", 0), handler) as srv:
+    print(srv.server_address[1], flush=True)
+    srv.serve_forever()
+' "$verify_staging/public" >"$work_dir/port.txt" 2>/dev/null &
+server_pid=$!
+for _ in $(seq 1 50); do
+  [ -s "$work_dir/port.txt" ] && break
+  sleep 0.1
+done
+port="$(head -n1 "$work_dir/port.txt")"
+[ -n "$port" ] || fail "verification fixture server did not start"
+
+: >"$FAKE_WRANGLER_LOG"
+(cd "$verify_deck" &&
+  ALTMEJD_SLIDES_VERIFY_BASE="http://127.0.0.1:$port" \
+    ALTMEJD_SLIDES_VERIFY_ATTEMPTS=2 ALTMEJD_SLIDES_VERIFY_DELAY_MS=100 \
+    quarto run "$publisher" --keep-staging --staging-dir "$work_dir/verify-staging2") \
+  >"$work_dir/verify-retry.log" 2>&1 || fail "verification retry exited non-zero"
+grep -q "retrying the pending verification" "$work_dir/verify-retry.log" ||
+  fail "retry did not recognize the pending deployment"
+if grep -q " deploy " "$FAKE_WRANGLER_LOG"; then
+  fail "verification retry redeployed unchanged content"
+fi
+if grep -q -- "--adopt" "$work_dir/verify-retry.log"; then
+  fail "retry demanded --adopt for its own worker"
+fi
+python3 - "$verify_deck/.altmejd-slides-publish.json" <<'PY' || fail "successful retry did not finalize the state"
+import json, sys
+s = json.load(open(sys.argv[1]))
+assert s["decks"]["verify26"]["verification"] == "ok"
+PY
+
+(cd "$verify_deck" &&
+  quarto run "$publisher" --no-verify --keep-staging --staging-dir "$work_dir/verify-staging3") \
+  >"$work_dir/verify-skip.log" 2>&1 || fail "post-verification republish exited non-zero"
+grep -q "skipping deploy" "$work_dir/verify-skip.log" ||
+  fail "verified unchanged republish was not skipped"
 
 echo "publish integration: all checks passed"
