@@ -28,7 +28,7 @@ quarto update adamaltmejd/altmejd-slides
 Pin a deck to a released extension when reproducibility matters:
 
 ```sh
-quarto add adamaltmejd/altmejd-slides@v0.4.0
+quarto add adamaltmejd/altmejd-slides@v0.4.1
 ```
 
 The complete copyable front matter lives in [`template.qmd`](template.qmd).
@@ -184,7 +184,9 @@ name\@university.edu · [example.org](https://example.org)
 Content can be gated to one delivery mode: `.handout-only` blocks appear only
 under `?handout=true` and in the handout PDF, while `.live-only` blocks
 disappear there. Tables set tabular figures for aligned columns; a
-`.table-note` div under a table renders a centered source note, and an
+`.table-note` div directly under a table renders a quiet source note spanning
+exactly the table's width (long notes under wide tables left-align instead of
+wrapping into a centered stack), and an
 `[0.18]{.emph}` span puts a quiet accent chip on the key value in a table or
 sentence.
 

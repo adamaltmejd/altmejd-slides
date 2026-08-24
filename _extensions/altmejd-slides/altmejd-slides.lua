@@ -17,6 +17,8 @@ local agenda = {
 
 local bundled_math = true
 
+local auto_stretch = true
+
 local color_variables = {
   { "background", "--altmejd-background" },
   { "foreground", "--altmejd-foreground" },
@@ -195,6 +197,7 @@ local function read_metadata(meta)
   agenda.sections = pandoc.List()
   local options = meta["altmejd-slides"]
   bundled_math = true
+  auto_stretch = as_boolean(meta["auto-stretch"], true)
   if options == nil or type(options) ~= "table" then
     read_agenda(nil)
   else
@@ -205,14 +208,14 @@ local function read_metadata(meta)
 
   quarto.doc.add_html_dependency({
     name = "altmejd-slides-runtime",
-    version = "0.4.0",
+    version = "0.4.1",
     scripts = { "resources/runtime.js" },
   })
   -- Bundled OFL typefaces, vendored like KaTeX so rendering and PDF capture
   -- never depend on host-installed fonts.
   quarto.doc.add_html_dependency({
     name = "altmejd-slides-fonts",
-    version = "0.4.0",
+    version = "0.4.1",
     stylesheets = { "resources/fonts/fonts.css" },
   })
   if bundled_math then
@@ -224,7 +227,7 @@ local function read_metadata(meta)
     })
     quarto.doc.add_html_dependency({
       name = "altmejd-slides-math",
-      version = "0.4.0",
+      version = "0.4.1",
       scripts = { "resources/math.js" },
     })
   end
@@ -444,9 +447,22 @@ local function contains_internal_link(block)
   return found
 end
 
+local function contains_media(inlines)
+  local found = false
+  pandoc.walk_inline(pandoc.Span(inlines), {
+    Image = function(image)
+      found = true
+      return image
+    end,
+  })
+  return found
+end
+
+-- Navigation is a row of short internal links. A link wrapping a figure is a
+-- clickable figure, not a control, and docking it as navigation collapses it.
 local function is_navigation_inline(inline)
   if inline.t == "Link" then
-    return inline.target:match("^#") ~= nil
+    return inline.target:match("^#") ~= nil and not contains_media(inline.content)
   elseif inline.t == "Space" or inline.t == "SoftBreak" or inline.t == "LineBreak" then
     return true
   elseif inline.t == "Str" then
@@ -455,6 +471,7 @@ local function is_navigation_inline(inline)
     return (inline.classes:includes("back")
         or inline.classes:includes("primary"))
       and contains_internal_link(pandoc.Plain(inline.content))
+      and not contains_media(inline.content)
   end
   return false
 end
@@ -482,6 +499,128 @@ local function label_back_controls(block)
   })
 end
 
+-- Quarto's auto-stretch skips any slide that carries an `::: {.aside}`, so a
+-- lone figure on such a slide keeps its intrinsic size and left alignment
+-- instead of filling the slide. Re-apply the class Quarto would have added;
+-- the runtime then reserves the aside's height for it like any other stretch.
+local function count_images(blocks)
+  local count = 0
+  for _, block in ipairs(blocks) do
+    pandoc.walk_block(block, {
+      Image = function(image)
+        count = count + 1
+        return image
+      end,
+    })
+  end
+  return count
+end
+
+local function is_lone_image_block(block)
+  if block.t ~= "Para" and block.t ~= "Plain" then
+    return false
+  end
+  return #block.content == 1 and block.content[1].t == "Image"
+end
+
+-- A captioned or linked figure cannot take the stretch class: Quarto hoists
+-- the image out of its `<figure>` or `<a>` wrapper only on its own
+-- auto-stretch path, and a stretch class left nested inside one of those
+-- wrappers overflows the slide instead of filling it. Those fill by layout.
+local function is_wrapped_figure(block)
+  if block.t == "Figure" then
+    return #block.content == 1 and is_lone_image_block(block.content[1])
+  end
+  if block.t ~= "Para" and block.t ~= "Plain" then
+    return false
+  end
+  local inline = #block.content == 1 and block.content[1] or nil
+  return inline ~= nil
+    and inline.t == "Link"
+    and #inline.content == 1
+    and inline.content[1].t == "Image"
+end
+
+local function has_direct_aside(blocks)
+  for _, block in ipairs(blocks) do
+    if block.t == "Div"
+      and block.classes:includes("aside")
+      and not block.classes:includes("notes")
+    then
+      return true
+    end
+  end
+  return false
+end
+
+local function stretch_lone_figure(header, blocks)
+  if not has_direct_aside(blocks) or count_images(blocks) ~= 1 then
+    return blocks
+  end
+
+  for index, block in ipairs(blocks) do
+    if is_lone_image_block(block) then
+      blocks[index] = pandoc.walk_block(block, {
+        Image = function(image)
+          if not (image.classes:includes("r-stretch") or image.classes:includes("stretch")) then
+            image.classes:insert("r-stretch")
+          end
+          return image
+        end,
+      })
+      return blocks
+    elseif is_wrapped_figure(block) then
+      if not header.classes:includes("layout-fill") then
+        header.classes:insert("layout-fill")
+      end
+      return blocks
+    end
+  end
+
+  return blocks
+end
+
+local function stretch_aside_figures(blocks)
+  local output = pandoc.List()
+  local index = 1
+
+  while index <= #blocks do
+    local block = blocks[index]
+    output:insert(block)
+    index = index + 1
+
+    if block.t == "Header" and block.level == 2 then
+      local slide = pandoc.List()
+      while index <= #blocks
+        and not (blocks[index].t == "Header" and blocks[index].level <= 2)
+      do
+        slide:insert(blocks[index])
+        index = index + 1
+      end
+      output:extend(stretch_lone_figure(block, slide))
+    end
+  end
+
+  return output
+end
+
+-- A `.table-note` div is a sibling of the table it annotates, so CSS alone
+-- cannot size the note to the table's rendered width. Pair the two in a
+-- shared fit-content wrapper; the note then spans exactly the table.
+local function wraps_table(block)
+  if block.t == "Table" then
+    return true
+  end
+  if block.t == "Div" or block.t == "Figure" then
+    for _, child in ipairs(block.content) do
+      if wraps_table(child) then
+        return true
+      end
+    end
+  end
+  return false
+end
+
 local function enrich_research_layouts(blocks)
   local output = pandoc.List()
   local current_slide = nil
@@ -490,6 +629,15 @@ local function enrich_research_layouts(blocks)
     block = label_back_controls(block)
     if block.t == "Header" and block.level <= 2 then
       current_slide = block.level == 2 and block or nil
+    elseif block.t == "Div"
+      and block.classes:includes("table-note")
+      and #output > 0
+      and wraps_table(output[#output])
+    then
+      block = pandoc.Div(
+        { output:remove(#output), block },
+        pandoc.Attr("", { "table-with-note" })
+      )
     elseif current_slide ~= nil and is_figure_panels(block) then
       if not block.classes:includes("figure-panels") then
         block.classes:insert("figure-panels")
@@ -501,6 +649,10 @@ local function enrich_research_layouts(blocks)
       block = pandoc.Div({ block }, pandoc.Attr("", { "slide-nav" }))
     end
     output:insert(block)
+  end
+
+  if auto_stretch then
+    output = stretch_aside_figures(output)
   end
 
   return output

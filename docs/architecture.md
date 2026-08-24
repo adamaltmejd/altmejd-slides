@@ -54,13 +54,22 @@ The same Lua filter collects level-one headings, inserts the configured agenda
 content for each section divider, and treats direct section content as a kicker.
 It also recognizes the narrow, semantic
 case of two Quarto columns that each contain a figure and enriches them with
-the extension's fill-height panel class. It does not replace Quarto's slide
-construction.
+the extension's fill-height panel class. Because Quarto skips its own
+auto-stretch on any slide carrying an `::: {.aside}`, the filter restores it
+for a slide whose only figure is a top-level image: a bare image takes the
+stretch class, while a captioned or linked one keeps its wrapper and takes the
+fill-height layout class instead. `auto-stretch: false` disables both. It does
+not replace Quarto's slide construction.
 
 The remaining slide primitives are pure theme contracts with no Lua
 involvement: `.statement`, `.closing-slide`, and `.full-bleed` are slide
 classes, `.stat-row`, `.table-note`, and `.emph` are content classes, and
-callouts restyle Quarto's native callout markup in place. Mode gating
+callouts restyle Quarto's native callout markup in place. One exception: a
+`.table-note` that directly follows a table is a sibling of the element it
+annotates, so the filter pairs the two in a `.table-with-note` wrapper. The
+wrapper shrinks to the table, the note spans it exactly, and a container
+query switches a note wider than the standalone 30em clamp to ragged-right.
+A note with no preceding table keeps the pure-theme centered styling. Mode gating
 (`.handout-only`, `.live-only`) rides on the `altmejd-handout` root class the
 runtime already maintains. The intent behind these primitives and the palette
 is recorded in `docs/design.md`.

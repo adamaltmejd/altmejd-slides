@@ -390,7 +390,9 @@ $code-bg: $altmejd-code-bg !default;
   );
 }
 
-// A quiet source note tucked under a centered table.
+// A quiet source note tucked under a centered table. A standalone note keeps
+// this centered clamp; the Lua filter pairs a note that directly follows a
+// table into a `.table-with-note` wrapper, which overrides the clamp below.
 .reveal .slide .table-note {
   width: fit-content;
   max-width: min(100%, 30em);
@@ -403,6 +405,31 @@ $code-bg: $altmejd-code-bg !default;
 
 .reveal .slide .table-note p {
   margin: 0;
+}
+
+// The shared wrapper shrinks to the table, so the note can span exactly the
+// table's rendered width. The width: 0 / min-width: 100% pair keeps a long
+// one-line note from widening the fit-content wrapper past the table.
+.reveal .slide .table-with-note {
+  width: fit-content;
+  margin-inline: auto;
+}
+
+.reveal .slide .table-with-note .table-note {
+  width: 0;
+  min-width: 100%;
+  max-width: none;
+  margin-inline: 0;
+  container-type: inline-size;
+}
+
+// A note as wide as a wide table reads better ragged-right; under a narrow
+// table the short centered line still looks like a caption. 30em matches the
+// standalone clamp (both resolve against the note's 0.5em type size).
+@container (min-width: 30em) {
+  .reveal .slide .table-with-note .table-note p {
+    text-align: left;
+  }
 }
 
 // The "circle the coefficient" move: an accent chip on the key value in a
@@ -430,6 +457,14 @@ $code-bg: $altmejd-code-bg !default;
   display: block;
   margin-right: auto;
   margin-left: auto;
+}
+
+// Quarto unwraps a standalone figure to a direct child only on its own
+// auto-stretch path. A paragraph holding nothing but a figure, linked or not,
+// is the same standalone object, so it centers the same way.
+.reveal .slide > p:has(> img:only-child),
+.reveal .slide > p:has(> a:only-child > img:only-child) {
+  text-align: center;
 }
 
 .reveal .progress {
@@ -1253,6 +1288,43 @@ $code-bg: $altmejd-code-bg !default;
 .reveal .slide.layout-fill > .figure-panels {
   flex: 1 1 auto;
   min-height: 0;
+}
+
+// Quarto stretches a standalone figure only where it can hoist the image to a
+// direct slide child. A captioned figure keeps its `<figure>` wrapper and a
+// linked figure keeps its `<a>`, so an image inside one has no height to
+// shrink against and grows to the slide width instead. Under `.layout-fill`
+// the wrapper takes the remaining height and the image contains itself in it.
+.reveal .slide.layout-fill > :is(.quarto-figure, figure),
+.reveal .slide.layout-fill > .quarto-figure > figure,
+.reveal .slide.layout-fill > p:has(> a:only-child > img:only-child) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0;
+}
+
+.reveal .slide.layout-fill > :is(.quarto-figure, figure) p:has(> img),
+.reveal .slide.layout-fill > p:has(> a:only-child > img:only-child) > a {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  margin: 0;
+}
+
+.reveal .slide.layout-fill > :is(.quarto-figure, figure) img,
+.reveal .slide.layout-fill > p:has(> a:only-child > img:only-child) img {
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.reveal .slide.layout-fill > :is(.quarto-figure, figure) figcaption {
+  flex: 0 0 auto;
 }
 
 // The filter upgrades ordinary two-image Quarto columns to this layout. Authors

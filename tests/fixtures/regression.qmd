@@ -241,6 +241,33 @@ A live-only discussion prompt.
 A handout-only reading note.
 :::
 
+## Implicit figure stretch {#implicit-figure-stretch}
+
+![](../../examples/assets/estimate.svg){fig-alt="A lone figure that must fill the slide even though it is not tagged for stretch"}
+
+::: {.aside}
+Quarto's auto-stretch skips every slide that carries an aside, so the format
+restores it for a lone untagged figure like this one.
+:::
+
+## Captioned figure with an aside {#captioned-figure-stretch}
+
+![A caption that must keep its own line below the figure](../../examples/assets/estimate.svg){fig-alt="A captioned figure that must fit above the aside"}
+
+::: {.aside}
+A captioned figure keeps Quarto's `<figure>` wrapper, so it fills the slide by
+layout instead of by the stretch class.
+:::
+
+## Linked figure is not navigation {#linked-figure}
+
+[![](../../examples/assets/estimate.svg){fig-alt="A figure wrapped in an internal link"}](#implicit-figure-stretch)
+
+::: {.aside}
+A lone figure wrapped in an internal link is a clickable figure, not a
+navigation row, so it must not dock at the bottom of the slide.
+:::
+
 ## Photograph slide with a deliberately long title {.full-bleed background-image="../../examples/assets/field.svg" background-size="cover" #photograph}
 
 A caption chip long enough to test that it wraps inside its width cap instead

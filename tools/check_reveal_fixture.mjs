@@ -413,6 +413,79 @@ try {
     throw new Error(`navigation or live aside contract failed: ${JSON.stringify(layout)}`);
   }
 
+  // Standalone figures run in their own evaluate call with eager captures, so
+  // navigating between these slides cannot stale the probes above.
+  const figures = await page.evaluate(async () => {
+    const rect = (element) => element.getBoundingClientRect();
+    const show = async (id) => {
+      const slide = document.getElementById(id);
+      if (!slide) {
+        throw new Error(`fixture slide is missing: ${id}`);
+      }
+      const { h, v } = globalThis.Reveal.getIndices(slide);
+      globalThis.Reveal.slide(h, v);
+      const images = Array.from(slide.querySelectorAll("img"), (image) =>
+        image.complete && image.naturalWidth > 0
+          ? Promise.resolve()
+          : new Promise((resolve) => {
+              image.addEventListener("load", resolve, { once: true });
+              image.addEventListener("error", resolve, { once: true });
+            }),
+      );
+      await Promise.all(images);
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      return slide;
+    };
+    const centered = (element, slide) =>
+      Math.abs(
+        rect(element).left + rect(element).width / 2 - (rect(slide).left + rect(slide).width / 2),
+      ) < 2;
+    const asideOf = (slide) => slide.querySelector(":scope > .aside, :scope > aside:not(.notes)");
+
+    // Quarto drops auto-stretch on any slide holding an aside, so an untagged
+    // lone figure must still be stretched and centered by the format itself.
+    const implicitSlide = await show("implicit-figure-stretch");
+    const implicitFigure = implicitSlide.querySelector(":scope > img");
+    const implicitStretched =
+      implicitFigure.classList.contains("r-stretch") &&
+      rect(implicitFigure).width > rect(implicitSlide).width * 0.6 &&
+      rect(implicitFigure).height > 100 &&
+      centered(implicitFigure, implicitSlide) &&
+      rect(implicitFigure).bottom <= rect(asideOf(implicitSlide)).top + 1;
+
+    // A captioned figure keeps Quarto's `<figure>` wrapper, so it fills the
+    // slide by layout: the image contains itself above its own caption line
+    // and the whole object clears the aside.
+    const captionedSlide = await show("captioned-figure-stretch");
+    const captionedFigure = captionedSlide.querySelector("img");
+    const caption = captionedSlide.querySelector("figcaption");
+    const captionedFits =
+      captionedSlide.classList.contains("layout-fill") &&
+      rect(captionedFigure).width > rect(captionedSlide).width * 0.6 &&
+      rect(captionedFigure).height > 100 &&
+      rect(captionedFigure).right <= rect(captionedSlide).right + 2 &&
+      centered(captionedFigure, captionedSlide) &&
+      rect(captionedFigure).bottom <= rect(caption).top + 1 &&
+      rect(caption).bottom <= rect(asideOf(captionedSlide)).top + 1;
+
+    // A lone figure wrapped in an internal link is a clickable figure, not a
+    // navigation row, so it must stay in flow at full size.
+    const linkedSlide = await show("linked-figure");
+    const linkedFigure = linkedSlide.querySelector("img");
+    const linkedInFlow =
+      linkedSlide.querySelector(".slide-nav") === null &&
+      rect(linkedFigure).width > 100 &&
+      rect(linkedFigure).height > 100 &&
+      centered(linkedFigure, linkedSlide) &&
+      rect(linkedFigure).bottom <= rect(asideOf(linkedSlide)).top + 1;
+
+    return { implicitStretched, captionedFits, linkedInFlow };
+  });
+  console.log(JSON.stringify({ figures }));
+  if (!figures.implicitStretched || !figures.captionedFits || !figures.linkedInFlow) {
+    throw new Error(`standalone figure layout failed: ${JSON.stringify(figures)}`);
+  }
+
   // The v0.4 primitives run in their own evaluate call with eager captures,
   // because these slides share the configured section's vertical stack and
   // only the active stack child keeps a layout.
