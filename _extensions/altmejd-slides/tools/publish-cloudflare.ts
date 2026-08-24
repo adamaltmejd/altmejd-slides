@@ -10,6 +10,7 @@
 import {
   type CloudflareTarget,
   collectAssetRefs,
+  DEFAULT_HOST,
   deckWorkerScript,
   deckWranglerConfig,
   deriveZone,
@@ -209,6 +210,19 @@ async function inspectDeck(input: string): Promise<{
   const publish = (extension.publish ?? {}) as Record<string, unknown>;
   const cloudflareMeta = publish.cloudflare as Record<string, unknown> | undefined;
   return { outputFile, cloudflareMeta };
+}
+
+// The default slug source: the deck repository's directory name, from the git
+// worktree root when available so subdirectories still name the repository.
+async function projectName(): Promise<string> {
+  const git = await run(["git", "rev-parse", "--show-toplevel"], { capture: true });
+  const root = git.code === 0 ? git.stdout.trim() : Deno.cwd();
+  const name =
+    root
+      .replace(/[/\\]+$/, "")
+      .split(/[/\\]/)
+      .pop() ?? "";
+  return name;
 }
 
 async function listQmdFiles(): Promise<string[]> {
@@ -441,20 +455,21 @@ async function bootstrapGateway(opts: Options): Promise<void> {
   if (host === undefined) {
     const qmds = await listQmdFiles();
     const input = resolveInput(qmds, opts.input);
-    if (typeof input !== "string") {
-      fail(`${input.error}\n(or pass --host directly to --bootstrap-gateway)`);
+    if (typeof input === "string" && (await exists(input))) {
+      const { cloudflareMeta } = await inspectDeck(input);
+      const target = resolveTarget({
+        metadata: cloudflareMeta,
+        cliSlug: "bootstrap",
+        projectName: "bootstrap",
+      });
+      if ("error" in target) {
+        fail(target.error);
+      }
+      host = target.host;
+      zone = zone ?? target.zone;
+    } else {
+      host = DEFAULT_HOST;
     }
-    const { cloudflareMeta } = await inspectDeck(input);
-    const target = resolveTarget({
-      metadata: cloudflareMeta,
-      cliSlug: "bootstrap",
-      inputStem: input,
-    });
-    if ("error" in target) {
-      fail(target.error);
-    }
-    host = target.host;
-    zone = zone ?? target.zone;
   }
   if (zone === undefined) {
     const derived = deriveZone(host);
@@ -501,13 +516,16 @@ async function publish(opts: Options): Promise<void> {
   }
 
   const { outputFile, cloudflareMeta } = await inspectDeck(input);
-  const stem = input.replace(/\.qmd$/, "");
   const metadata = {
     ...cloudflareMeta,
     ...(opts.host !== undefined ? { host: opts.host } : {}),
     ...(opts.zone !== undefined ? { zone: opts.zone } : {}),
   };
-  const target = resolveTarget({ metadata, cliSlug: opts.slug, inputStem: stem });
+  const target = resolveTarget({
+    metadata,
+    cliSlug: opts.slug,
+    projectName: await projectName(),
+  });
   if ("error" in target) {
     fail(target.error);
   }

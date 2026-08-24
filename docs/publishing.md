@@ -46,13 +46,17 @@ routes, or Workers.
 
 ## Project configuration
 
+Configuration is optional: with none at all, a deck publishes to
+`https://slides.altmejd.se/<repository-name>/`. Override any part in the
+deck YAML:
+
 ```yaml
 altmejd-slides:
   publish:
     cloudflare:
-      host: slides.altmejd.se
+      host: slides.altmejd.se   # default
       # zone: altmejd.se        # default: host minus its first label
-      # slug: ucls26            # default: the QMD file stem, sanitized
+      # slug: ucls26            # default: the deck repository's name, sanitized
 ```
 
 `host` and `zone` are non-secret. The slug must be 1-46 lowercase letters,

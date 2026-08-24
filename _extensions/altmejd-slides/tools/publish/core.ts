@@ -5,6 +5,7 @@
 export const WORKER_PREFIX = "altmejd-slides-";
 export const GATEWAY_WORKER = "altmejd-slides-gateway";
 export const COMPATIBILITY_DATE = "2026-08-01";
+export const DEFAULT_HOST = "slides.altmejd.se";
 
 // Slugs become Worker names (altmejd-slides-<slug> must stay under Cloudflare's
 // 63-character Worker name limit) and public path segments.
@@ -56,20 +57,16 @@ interface RawCloudflareMeta {
 export interface ResolveTargetInput {
   metadata: RawCloudflareMeta | undefined;
   cliSlug: string | undefined;
-  inputStem: string;
+  // Default slug source: the deck repository's directory name.
+  projectName: string;
 }
 
-// Precedence: --slug flag, then YAML slug, then the sanitized source file stem.
+// Precedence: --slug flag, then YAML slug, then the sanitized repository name.
+// The host defaults to slides.altmejd.se unless the YAML overrides it.
 export function resolveTarget(input: ResolveTargetInput): CloudflareTarget | ResolveError {
   const meta = input.metadata ?? {};
-  const host = typeof meta.host === "string" ? meta.host.trim() : "";
-  if (host === "") {
-    return {
-      error:
-        "no publish host configured: set altmejd-slides.publish.cloudflare.host " +
-        "(for example slides.altmejd.se) in the deck YAML",
-    };
-  }
+  const rawHost = typeof meta.host === "string" ? meta.host.trim() : "";
+  const host = rawHost === "" ? DEFAULT_HOST : rawHost;
   let zone = typeof meta.zone === "string" ? meta.zone.trim() : "";
   if (zone === "") {
     const derived = deriveZone(host);
@@ -84,9 +81,9 @@ export function resolveTarget(input: ResolveTargetInput): CloudflareTarget | Res
     return { error: `host "${host}" is not inside zone "${zone}"` };
   }
   const rawSlug = input.cliSlug ?? (typeof meta.slug === "string" ? meta.slug.trim() : undefined);
-  const slug = rawSlug ?? sanitizeSlug(input.inputStem);
+  const slug = rawSlug ?? sanitizeSlug(input.projectName);
   if (slug === "") {
-    return { error: `cannot derive a slug from "${input.inputStem}": pass --slug` };
+    return { error: `cannot derive a slug from "${input.projectName}": pass --slug` };
   }
   const slugError = validateSlug(slug);
   if (slugError !== null) {

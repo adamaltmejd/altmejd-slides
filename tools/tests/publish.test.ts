@@ -38,39 +38,51 @@ describe("slug derivation", () => {
 });
 
 describe("target resolution", () => {
-  test("derives the slug from the source stem by default", () => {
-    const target = resolveTarget({ metadata: META, cliSlug: undefined, inputStem: "My Talk" });
+  test("derives the slug from the repository name by default", () => {
+    const target = resolveTarget({ metadata: META, cliSlug: undefined, projectName: "My Talk" });
     expect(target).toEqual({ host: "slides.altmejd.se", zone: "altmejd.se", slug: "my-talk" });
   });
 
-  test("YAML slug beats the stem and the CLI flag beats YAML", () => {
+  test("host defaults to slides.altmejd.se and YAML overrides it", () => {
+    expect(resolveTarget({ metadata: undefined, cliSlug: undefined, projectName: "t" })).toEqual({
+      host: "slides.altmejd.se",
+      zone: "altmejd.se",
+      slug: "t",
+    });
+    expect(
+      resolveTarget({
+        metadata: { host: "talks.example.org" },
+        cliSlug: undefined,
+        projectName: "t",
+      }),
+    ).toEqual({ host: "talks.example.org", zone: "example.org", slug: "t" });
+  });
+
+  test("YAML slug beats the repo name and the CLI flag beats YAML", () => {
     const yaml = resolveTarget({
       metadata: { ...META, slug: "ucls26" },
       cliSlug: undefined,
-      inputStem: "talk",
+      projectName: "talk",
     });
     expect(yaml).toEqual(expect.objectContaining({ slug: "ucls26" }));
     const cli = resolveTarget({
       metadata: { ...META, slug: "ucls26" },
       cliSlug: "override",
-      inputStem: "talk",
+      projectName: "talk",
     });
     expect(cli).toEqual(expect.objectContaining({ slug: "override" }));
   });
 
-  test("requires a host and validates the zone relationship", () => {
-    expect(
-      resolveTarget({ metadata: undefined, cliSlug: undefined, inputStem: "t" }),
-    ).toHaveProperty("error");
+  test("validates the zone relationship and apex hosts", () => {
     expect(
       resolveTarget({
         metadata: { host: "slides.altmejd.se", zone: "example.com" },
         cliSlug: undefined,
-        inputStem: "t",
+        projectName: "t",
       }),
     ).toHaveProperty("error");
     expect(
-      resolveTarget({ metadata: { host: "altmejd.se" }, cliSlug: undefined, inputStem: "t" }),
+      resolveTarget({ metadata: { host: "altmejd.se" }, cliSlug: undefined, projectName: "t" }),
     ).toHaveProperty("error");
   });
 
@@ -82,7 +94,7 @@ describe("target resolution", () => {
 
   test("rejects an invalid explicit slug", () => {
     expect(
-      resolveTarget({ metadata: META, cliSlug: "Bad Slug", inputStem: "talk" }),
+      resolveTarget({ metadata: META, cliSlug: "Bad Slug", projectName: "talk" }),
     ).toHaveProperty("error");
   });
 });

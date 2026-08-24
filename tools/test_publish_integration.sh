@@ -145,6 +145,35 @@ fi
 quarto run "$publisher" --no-verify --slug stolen --adopt --keep-staging \
   --staging-dir "$work_dir/staging5" || fail "--adopt did not allow the takeover"
 
+# --- zero-config defaults: host slides.altmejd.se, slug from repo name ------
+defaults_dir="$work_dir/my-course-talk"
+mkdir -p "$defaults_dir"
+cat >"$defaults_dir/slides.qmd" <<'QMD'
+---
+title: "Defaults Fixture"
+format: revealjs
+---
+
+## Only slide
+
+Content.
+QMD
+(cd "$defaults_dir" &&
+  quarto run "$publisher" --no-verify --keep-staging --staging-dir "$defaults_dir/staging") ||
+  fail "zero-config publish exited non-zero"
+defaults_config="$FAKE_WRANGLER_STATE/config-altmejd-slides-my-course-talk.json"
+test -f "$defaults_config" || fail "default slug was not taken from the repository name"
+python3 - "$defaults_config" <<'PY' || fail "default host or zone is wrong"
+import json, sys
+c = json.load(open(sys.argv[1]))
+patterns = [r["pattern"] for r in c["routes"]]
+assert patterns == [
+    "slides.altmejd.se/my-course-talk",
+    "slides.altmejd.se/my-course-talk/*",
+], patterns
+assert all(r["zone_name"] == "altmejd.se" for r in c["routes"])
+PY
+
 # --- gateway bootstrap ------------------------------------------------------
 : >"$FAKE_WRANGLER_LOG"
 quarto run "$publisher" --bootstrap-gateway --host slides.example.test ||
