@@ -33,6 +33,12 @@ altmejd-slides:
     heading: false
     bullets: none
     clickable: false
+  # Explicit Cloudflare publishing via `make publish`; rendering never deploys.
+  # The slug defaults to this file's name — set one to choose the public path.
+  publish:
+    cloudflare:
+      host: slides.altmejd.se
+      # slug: my-talk
 
 slide-remote:
   worker-url: https://slide-remote.adamaltmejd.workers.dev

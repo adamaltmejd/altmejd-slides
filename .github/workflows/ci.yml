@@ -47,6 +47,24 @@ jobs:
       - name: Render fixtures
         run: quarto render
 
+      - name: Run publish pipeline against mocked wrangler
+        run: bash tools/test_publish_integration.sh
+
+      - name: Check staged deck serves beneath a path prefix
+        run: |
+          chrome_path="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$chrome_path"
+          deck_dir="$(mktemp -d)"
+          cp examples/showcase.qmd "$deck_dir/"
+          cp -R examples/assets "$deck_dir/assets"
+          ln -s "$PWD/_extensions" "$deck_dir/_extensions"
+          (cd "$deck_dir" && quarto run \
+            "$GITHUB_WORKSPACE/_extensions/altmejd-slides/tools/publish-cloudflare.ts" \
+            --stage-only --host slides.example.test --slug showcase \
+            --staging-dir "$deck_dir/staging")
+          CHROME_PATH="$chrome_path" node tools/check_published_prefix.mjs \
+            "$deck_dir/staging/public" showcase
+
       - name: Check near-cap code remains visible
         run: |
           chrome_path="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
