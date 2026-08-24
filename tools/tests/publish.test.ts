@@ -7,6 +7,7 @@ import {
   deckWranglerConfig,
   deriveZone,
   gatewayWranglerConfig,
+  headersFileContent,
   planStaging,
   publicUrl,
   resolveArtifacts,
@@ -269,5 +270,17 @@ describe("asset reference collection", () => {
     expect(plan.directories).toEqual(["assets", "talk_files"]);
     expect(plan.files).toEqual(["portrait.jpg"]);
     expect(plan.outside).toEqual(["../secrets.txt"]);
+  });
+
+  test("asset headers allow stale service on failed revalidation", () => {
+    const lines = headersFileContent().split("\n");
+    expect(lines[0]).toBe("/*");
+    expect(lines[1]).toMatch(/^ {2}Cache-Control: /);
+    expect(lines[1]).toContain("stale-while-revalidate");
+    expect(lines[1]).not.toContain("must-revalidate");
+    // The Workers _headers parser caps each line at 2000 characters.
+    for (const line of lines) {
+      expect(line.length).toBeLessThan(2000);
+    }
   });
 });

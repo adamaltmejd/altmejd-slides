@@ -12,7 +12,7 @@
     "test": "python3 -m unittest discover -s tools/tests -p 'test_*.py'",
     "test:ts": "bun test tools/tests",
     "test:publish": "bash tools/test_publish_integration.sh",
-    "test:browser": "node tools/check_reveal_fixture.mjs _site/tests/fixtures/regression.html '#near-cap-code-block pre' _site/tests/fixtures/no-agenda.html _site/examples/showcase.html _site/tests/fixtures/agenda-numbered.html _site/tests/fixtures/agenda-none.html && node tools/check_showcase.mjs _site/examples/showcase.html",
+    "test:browser": "node tools/check_reveal_fixture.mjs _site/tests/fixtures/regression.html '#near-cap-code-block pre' _site/tests/fixtures/no-agenda.html _site/examples/showcase.html _site/tests/fixtures/agenda-numbered.html _site/tests/fixtures/agenda-none.html && node tools/check_showcase.mjs _site/examples/showcase.html && node tools/check_media_recovery.mjs _site/examples/showcase.html",
     "render:examples": "quarto render",
     "pdf:examples": "python3 tools/render_revealjs_pdfs.py --site-dir _site --glob 'examples/*.html' --output-dir output/pdf"
   },

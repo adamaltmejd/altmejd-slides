@@ -94,6 +94,13 @@ always measures direct-child visible asides and reserves their space. Under
 `?handout=true` it also exposes direct-child speaker notes, measures them, and
 reserves the combined note-and-aside space.
 
+Reveal assigns lazy `data-src` image sources when a slide comes within view
+distance, so the network request often fires at reveal time — and neither the
+browser nor Reveal retries a failure, which would leave the slide blank on a
+flaky network. The runtime re-requests broken images on the current slide:
+immediately at reveal, on a short backoff, and when the browser comes back
+online. A successful retry reruns Reveal's stretch layout.
+
 The runtime disables Reveal 5.1's automatic narrow-screen scroll view. Quarto's
 vertical section stacks are otherwise promoted to extra scroll pages and break
 the title and panel layouts. Phones therefore receive the intact scaled slide
