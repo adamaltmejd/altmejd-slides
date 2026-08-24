@@ -9,6 +9,7 @@ import {
   gatewayWranglerConfig,
   planStaging,
   publicUrl,
+  resolveArtifacts,
   resolveInput,
   resolveTarget,
   routePatterns,
@@ -106,6 +107,46 @@ describe("input resolution", () => {
     expect(resolveInput(["a.qmd", "b.qmd"], undefined)).toHaveProperty("error");
     expect(resolveInput([], undefined)).toHaveProperty("error");
     expect(resolveInput(["a.qmd", "b.qmd"], "b.qmd")).toBe("b.qmd");
+  });
+});
+
+describe("artifact configuration", () => {
+  test("absent config publishes nothing extra", () => {
+    expect(resolveArtifacts(undefined)).toEqual([]);
+  });
+
+  test("resolves explicit artifacts with target defaulting to the source basename", () => {
+    expect(
+      resolveArtifacts({
+        "presentation-pdf": { source: "_site/talk-slides.pdf", target: "slides.pdf" },
+        "handout-pdf": { source: "_site/talk-handout.pdf" },
+      }),
+    ).toEqual([
+      { name: "handout-pdf", source: "_site/talk-handout.pdf", target: "talk-handout.pdf" },
+      { name: "presentation-pdf", source: "_site/talk-slides.pdf", target: "slides.pdf" },
+    ]);
+  });
+
+  test("rejects unsafe sources and targets", () => {
+    expect(resolveArtifacts({ a: {} })).toHaveProperty("error");
+    expect(resolveArtifacts({ a: { source: "/etc/passwd" } })).toHaveProperty("error");
+    expect(resolveArtifacts({ a: { source: "../outside.pdf" } })).toHaveProperty("error");
+    expect(resolveArtifacts({ a: { source: "x.pdf", target: "../up.pdf" } })).toHaveProperty(
+      "error",
+    );
+    expect(resolveArtifacts({ a: { source: "x.pdf", target: "/abs.pdf" } })).toHaveProperty(
+      "error",
+    );
+    expect(resolveArtifacts({ a: { source: "x.html", target: "index.html" } })).toHaveProperty(
+      "error",
+    );
+    expect(resolveArtifacts("pdf")).toHaveProperty("error");
+  });
+
+  test("allows nested targets with safe segments", () => {
+    expect(resolveArtifacts({ a: { source: "out/x.pdf", target: "pdf/slides.pdf" } })).toEqual([
+      { name: "a", source: "out/x.pdf", target: "pdf/slides.pdf" },
+    ]);
   });
 });
 
