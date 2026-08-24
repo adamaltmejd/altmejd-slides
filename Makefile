@@ -21,9 +21,9 @@ preview:
 publish:
 	@test -n "$(PUBLISH_SCRIPT)" || { \
 		echo "altmejd-slides extension not found under _extensions/"; exit 1; }
-	quarto run $(PUBLISH_SCRIPT) $(PUBLISH_ARGS)
+	quarto run "$(PUBLISH_SCRIPT)" $(PUBLISH_ARGS)
 
 bootstrap-gateway:
 	@test -n "$(PUBLISH_SCRIPT)" || { \
 		echo "altmejd-slides extension not found under _extensions/"; exit 1; }
-	quarto run $(PUBLISH_SCRIPT) --bootstrap-gateway $(PUBLISH_ARGS)
+	quarto run "$(PUBLISH_SCRIPT)" --bootstrap-gateway $(PUBLISH_ARGS)

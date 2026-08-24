@@ -10,6 +10,7 @@
 import {
   type CloudflareTarget,
   collectAssetRefs,
+  collectCssRefs,
   DEFAULT_HOST,
   deckWorkerScript,
   deckWranglerConfig,
@@ -152,20 +153,28 @@ async function run(
   }
 }
 
-async function commandExists(name: string): Promise<boolean> {
+async function commandVersion(name: string): Promise<string | null> {
   const probe = await run([name, "--version"], { capture: true });
-  return probe.code === 0;
+  return probe.code === 0 ? `${probe.stdout} ${probe.stderr}`.trim() : null;
 }
 
-// Pinned dependency story: an explicit override, a wrangler already on PATH,
-// or a pinned major via bunx/npx. Wrangler 4 is the supported major.
+async function commandExists(name: string): Promise<boolean> {
+  return (await commandVersion(name)) !== null;
+}
+
+// Pinned dependency story: an explicit override, a wrangler 4 already on
+// PATH, or the pinned major via bunx/npx. Wrangler 4 is the supported major.
 async function resolveWrangler(): Promise<string[]> {
   const override = Deno.env.get("ALTMEJD_SLIDES_WRANGLER");
   if (override !== undefined && override.trim() !== "") {
     return override.trim().split(/\s+/);
   }
-  if (await commandExists("wrangler")) {
-    return ["wrangler"];
+  const pathVersion = await commandVersion("wrangler");
+  if (pathVersion !== null) {
+    if (/\b4\.\d+\.\d+/.test(pathVersion)) {
+      return ["wrangler"];
+    }
+    console.error(`ignoring wrangler on PATH (${pathVersion}): wrangler 4 is the supported major`);
   }
   if (await commandExists("bunx")) {
     return ["bunx", "wrangler@4"];
@@ -243,9 +252,14 @@ async function copyDir(from: string, to: string): Promise<void> {
     }
     const source = `${from}/${entry.name}`;
     const destination = `${to}/${entry.name}`;
-    if (entry.isDirectory) {
+    // Deno.stat resolves symlinks, so linked assets are copied as content.
+    const info = entry.isSymlink ? await Deno.stat(source).catch(() => null) : entry;
+    if (info === null) {
+      continue; // dangling symlink; a referenced one fails the exists-check
+    }
+    if (info.isDirectory) {
       await copyDir(source, destination);
-    } else if (entry.isFile) {
+    } else if (info.isFile) {
       await Deno.copyFile(source, destination);
     }
   }
@@ -262,7 +276,10 @@ async function exists(path: string): Promise<boolean> {
 
 interface PublishState {
   version: 1;
-  decks: Record<string, { worker: string; host: string; contentHash: string; published: string }>;
+  decks: Record<
+    string,
+    { worker: string; host: string; zone?: string; contentHash: string; published: string }
+  >;
 }
 
 async function readState(): Promise<PublishState> {
@@ -319,7 +336,9 @@ async function workerExists(wrangler: string[], name: string): Promise<boolean> 
     return true;
   }
   const output = `${result.stdout}\n${result.stderr}`;
-  if (/not\s*found|does not exist|10007|workers\.api\.error/i.test(output)) {
+  // Match only Cloudflare's own missing-worker errors, not e.g. a wrapper
+  // printing "command not found" for a broken wrangler install.
+  if (/service_not_found|script not found|does not exist|\[code: 10007\]/i.test(output)) {
     return false;
   }
   fail(
@@ -356,6 +375,8 @@ async function stageDeck(
 ): Promise<string> {
   const publicDir = `${stagingDir}/public`;
   const deckDir = `${publicDir}/${target.slug}`;
+  // A reused --staging-dir must not keep files deleted from the deck.
+  await Deno.remove(publicDir, { recursive: true }).catch(() => {});
   await Deno.mkdir(deckDir, { recursive: true });
 
   const html = await Deno.readTextFile(outputFile);
@@ -385,9 +406,41 @@ async function stageDeck(
     await Deno.copyFile(file, `${deckDir}/${file}`);
   }
 
+  // Top-level stylesheets can reference images and fonts the HTML scan
+  // cannot see; stage one level of their url()/@import targets too.
+  const cssRefs = new Set<string>();
+  for (const file of plan.files) {
+    if (!file.toLowerCase().endsWith(".css")) {
+      continue;
+    }
+    for (const ref of collectCssRefs(await Deno.readTextFile(file))) {
+      cssRefs.add(ref);
+    }
+  }
+  const cssPlan = planStaging([...cssRefs]);
+  if (cssPlan.outside.length > 0) {
+    fail(
+      "stylesheet references leave the deck directory and cannot be published:\n  " +
+        cssPlan.outside.join("\n  "),
+    );
+  }
+  for (const dir of cssPlan.directories) {
+    if (!plan.directories.includes(dir)) {
+      if (!(await exists(dir))) {
+        fail(`directory referenced from a stylesheet is missing: ${dir}`);
+      }
+      await copyDir(dir, `${deckDir}/${dir}`);
+    }
+  }
+  for (const file of cssPlan.files) {
+    if (!plan.files.includes(file) && (await exists(file))) {
+      await Deno.copyFile(file, `${deckDir}/${file}`);
+    }
+  }
+
   // Every scanned reference must resolve inside the staged tree.
   const missing: string[] = [];
-  for (const ref of refs) {
+  for (const ref of [...refs, ...cssRefs]) {
     if (ref !== outputFile && !(await exists(`${deckDir}/${ref}`))) {
       missing.push(ref);
     }
@@ -396,8 +449,8 @@ async function stageDeck(
     fail(`staged deck is missing referenced assets:\n  ${missing.join("\n  ")}`);
   }
   console.log(
-    `staged ${plan.directories.length} directories and ${plan.files.length + 1} files ` +
-      `under ${target.slug}/`,
+    `staged ${plan.directories.length + cssPlan.directories.length} directories and ` +
+      `${plan.files.length + 1} files under ${target.slug}/`,
   );
   return publicDir;
 }
@@ -417,13 +470,23 @@ async function deployDeck(opts: Options, target: CloudflareTarget, stagingDir: s
   const wrangler = await resolveWrangler();
   const alreadyDeployed = await workerExists(wrangler, name);
 
-  if (alreadyDeployed && known === undefined && !opts.adopt && !opts.force) {
+  // Only --adopt authorizes taking over an unrecorded Worker; --force must
+  // not silently clobber a Worker this project never published.
+  if (alreadyDeployed && known === undefined && !opts.adopt) {
     fail(
       `a Worker named "${name}" already exists but this project has no record of it. ` +
         "Rerun with --adopt to take it over, or pick another slug with --slug.",
     );
   }
-  if (alreadyDeployed && known !== undefined && known.contentHash === contentHash && !opts.force) {
+  // Skip only when content AND routing are unchanged: a host or zone edit
+  // must redeploy even if the staged bytes are identical.
+  const unchanged =
+    alreadyDeployed &&
+    known !== undefined &&
+    known.contentHash === contentHash &&
+    known.host === target.host &&
+    known.zone === target.zone;
+  if (unchanged && !opts.force) {
     console.log(`content unchanged since the last publish of "${target.slug}"; skipping deploy`);
     console.log(`(use --force to deploy anyway)\n\npublished at: ${publicUrl(target)}`);
     return;
@@ -435,17 +498,20 @@ async function deployDeck(opts: Options, target: CloudflareTarget, stagingDir: s
     fail(`wrangler deploy failed with exit code ${deploy.code}`);
   }
 
+  // Verify before recording: a failed verification must leave the state
+  // unchanged so the next publish deploys and verifies again.
+  if (!opts.noVerify) {
+    await verifyPublished(publicUrl(target));
+  }
+
   state.decks[target.slug] = {
     worker: name,
     host: target.host,
+    zone: target.zone,
     contentHash,
     published: new Date().toISOString(),
   };
   await writeState(state);
-
-  if (!opts.noVerify) {
-    await verifyPublished(publicUrl(target));
-  }
   console.log(`\npublished at: ${publicUrl(target)}`);
 }
 
@@ -486,12 +552,12 @@ async function bootstrapGateway(opts: Options): Promise<void> {
       `${stagingDir}/wrangler.json`,
       `${JSON.stringify(gatewayWranglerConfig(host, zone), null, 2)}\n`,
     );
-    console.log(`deploying gateway Worker for https://${host}/ (zone ${zone})`);
     if (opts.stageOnly) {
-      console.log(`stage-only: gateway staged in ${stagingDir}`);
+      console.log(`stage-only: gateway staged in ${stagingDir}, nothing deployed`);
       opts.keepStaging = true;
       return;
     }
+    console.log(`deploying gateway Worker for https://${host}/ (zone ${zone})`);
     const wrangler = await resolveWrangler();
     const deploy = await run([...wrangler, "deploy", "--config", `${stagingDir}/wrangler.json`]);
     if (deploy.code !== 0) {

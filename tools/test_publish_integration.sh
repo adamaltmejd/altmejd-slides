@@ -122,6 +122,20 @@ if grep -q " deploy " "$FAKE_WRANGLER_LOG"; then
   fail "unchanged republish still deployed"
 fi
 
+# --- changed host redeploys despite unchanged content -----------------------
+: >"$FAKE_WRANGLER_LOG"
+quarto run "$publisher" --no-verify --host other.example.test --keep-staging \
+  --staging-dir "$work_dir/staging-host" || fail "host-change publish exited non-zero"
+grep -q " deploy " "$FAKE_WRANGLER_LOG" || fail "host change did not trigger a redeploy"
+python3 - "$FAKE_WRANGLER_STATE/config-altmejd-slides-fixture26.json" <<'PY' || fail "host change did not update the deployed routes"
+import json, sys
+c = json.load(open(sys.argv[1]))
+assert all(r["pattern"].startswith("other.example.test/") for r in c["routes"])
+PY
+# Restore the YAML host for the remaining checks.
+quarto run "$publisher" --no-verify --keep-staging \
+  --staging-dir "$work_dir/staging-host2" >/dev/null || fail "host restore publish failed"
+
 # --- forced republish deploys again ----------------------------------------
 : >"$FAKE_WRANGLER_LOG"
 staging3="$work_dir/staging3"
@@ -141,6 +155,10 @@ fi
 grep -q "already exists" "$work_dir/collision.log" || fail "collision refusal lacked explanation"
 if grep -q " deploy " "$FAKE_WRANGLER_LOG"; then
   fail "collision still deployed"
+fi
+if quarto run "$publisher" --no-verify --slug stolen --force --keep-staging \
+  --staging-dir "$work_dir/staging4b" >/dev/null 2>&1; then
+  fail "--force bypassed the unmanaged-worker collision guard"
 fi
 quarto run "$publisher" --no-verify --slug stolen --adopt --keep-staging \
   --staging-dir "$work_dir/staging5" || fail "--adopt did not allow the takeover"

@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   collectAssetRefs,
+  collectCssRefs,
   deckWranglerConfig,
   deriveZone,
   gatewayWranglerConfig,
@@ -174,6 +175,46 @@ describe("asset reference collection", () => {
       "talk_files/libs/revealjs/dist/reveal.css",
       "talk_files/libs/revealjs/dist/reveal.js",
     ]);
+  });
+
+  test("decodes percent-encoding and matches uppercase and background media", () => {
+    const html = `
+      <IMG SRC="assets/UP.png">
+      <img src="assets/my%20figure.png">
+      <section data-background-video="assets/clip.mp4"></section>
+      <section data-background-iframe="assets/embed.html"></section>
+      <img src="assets/q%3Fmark.svg?v=2">
+    `;
+    expect(collectAssetRefs(html)).toEqual([
+      "assets/UP.png",
+      "assets/clip.mp4",
+      "assets/embed.html",
+      "assets/my figure.png",
+      "assets/q?mark.svg",
+    ]);
+  });
+
+  test("collects relative url() and @import targets from stylesheets", () => {
+    const css = `
+      @import "theme/extra.css";
+      body { background: url(images/bg%20light.png); }
+      .hero { background-image: url("images/hero.jpg"); }
+      .icon { content: url('icon.svg'); }
+      .cdn { background: url(https://cdn.example.com/x.png); }
+      .inline { background: url(data:image/png;base64,AAAA); }
+      .abs { background: url(/absolute.png); }
+    `;
+    expect(collectCssRefs(css)).toEqual([
+      "icon.svg",
+      "images/bg light.png",
+      "images/hero.jpg",
+      "theme/extra.css",
+    ]);
+  });
+
+  test("decodes HTML entities without double-decoding", () => {
+    expect(collectAssetRefs('<img src="assets/a&amp;b.png">')).toEqual(["assets/a&b.png"]);
+    expect(collectAssetRefs('<img src="assets/a&amp;quot;.png">')).toEqual(["assets/a&quot;.png"]);
   });
 
   test("staging copies referenced directories wholesale and flags escapes", () => {

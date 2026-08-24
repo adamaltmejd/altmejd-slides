@@ -125,8 +125,8 @@ export function routePatterns(host: string, slug: string): string[] {
 }
 
 const REF_ATTRIBUTE =
-  /\s(?:src|href|data-src|poster|data-background-image)\s*=\s*("[^"]*"|'[^']*')/g;
-const SRCSET_ATTRIBUTE = /\s(?:srcset|data-srcset)\s*=\s*("[^"]*"|'[^']*')/g;
+  /\s(?:src|href|data-src|poster|data-background-image|data-background-video|data-background-iframe)\s*=\s*("[^"]*"|'[^']*')/gi;
+const SRCSET_ATTRIBUTE = /\s(?:srcset|data-srcset)\s*=\s*("[^"]*"|'[^']*')/gi;
 
 function isLocalRelative(ref: string): boolean {
   if (ref === "" || ref.startsWith("#") || ref.startsWith("/") || ref.startsWith("\\")) {
@@ -143,10 +143,23 @@ function stripQueryAndFragment(ref: string): string {
 }
 
 function decodeEntities(ref: string): string {
+  // &amp; last, so &amp;quot; does not double-decode.
   return ref
-    .replace(/&amp;/g, "&")
     .replace(/&#39;/g, "'")
-    .replace(/&quot;/g, '"');
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&");
+}
+
+// Pandoc percent-encodes URLs (a space becomes %20); staged files keep their
+// real names and Cloudflare decodes request paths before asset lookup, so
+// references are compared and staged in decoded form. Decode after stripping
+// the query/fragment so an encoded "?" or "#" stays part of the filename.
+function decodePercent(ref: string): string {
+  try {
+    return decodeURIComponent(ref);
+  } catch {
+    return ref;
+  }
 }
 
 // Collect local relative references from rendered HTML: src/href/poster,
@@ -154,7 +167,7 @@ function decodeEntities(ref: string): string {
 export function collectAssetRefs(html: string): string[] {
   const refs = new Set<string>();
   const add = (raw: string) => {
-    const ref = stripQueryAndFragment(decodeEntities(raw.trim()));
+    const ref = decodePercent(stripQueryAndFragment(decodeEntities(raw.trim())));
     if (isLocalRelative(ref) && ref !== "") {
       refs.add(ref);
     }
@@ -166,6 +179,34 @@ export function collectAssetRefs(html: string): string[] {
     for (const candidate of match[1].slice(1, -1).split(",")) {
       add(candidate.trim().split(/\s+/, 1)[0]);
     }
+  }
+  return [...refs].sort();
+}
+
+const CSS_URL = /url\(\s*("[^"]*"|'[^']*'|[^"')][^)]*)\s*\)/gi;
+const CSS_IMPORT = /@import\s+("[^"]*"|'[^']*')/gi;
+
+// Collect local relative url() and @import references from a top-level
+// stylesheet, so user CSS beside the deck stages its images and fonts.
+// Stylesheets inside referenced directories need no scan: those directories
+// are copied wholesale and their internal references stay relative.
+export function collectCssRefs(css: string): string[] {
+  const refs = new Set<string>();
+  const add = (raw: string) => {
+    let value = raw.trim();
+    if (value.startsWith('"') || value.startsWith("'")) {
+      value = value.slice(1, -1);
+    }
+    const ref = decodePercent(stripQueryAndFragment(value.trim()));
+    if (isLocalRelative(ref) && ref !== "") {
+      refs.add(ref);
+    }
+  };
+  for (const match of css.matchAll(CSS_URL)) {
+    add(match[1]);
+  }
+  for (const match of css.matchAll(CSS_IMPORT)) {
+    add(match[1]);
   }
   return [...refs].sort();
 }

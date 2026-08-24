@@ -102,7 +102,14 @@ Useful flags (pass via `PUBLISH_ARGS="..."`):
 - `--force` — deploy even when the staged content hash is unchanged.
 - `--no-verify` — skip the post-deploy URL check.
 
-Publishing records the deployed slug and content hash in
+Limitations: the publisher targets single-document decks that render next to
+their sources (the starter-template layout); a project whose `_quarto.yml`
+sets `output-dir` fails loudly rather than misdeploying. Top-level
+stylesheets have one level of relative `url()`/`@import` targets staged;
+assets referenced only from deeper CSS chains outside the deck's `_files`
+tree are not detected.
+
+Publishing records the deployed slug, host, zone, and content hash in
 `.altmejd-slides-publish.json` next to the deck; commit it so the unchanged
 check and collision protection follow the repository.
 
