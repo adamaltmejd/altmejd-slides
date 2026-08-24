@@ -658,10 +658,36 @@ local function enrich_research_layouts(blocks)
   return output
 end
 
+-- Slides from the appendix onward are excluded from the slide counter.
+-- Reveal's native visibility="uncounted" removes them from the total and
+-- freezes the shown number at the last counted slide, while the slides stay
+-- fully presentable and printable. An explicit visibility attribute wins.
+local function is_appendix_start(header)
+  return header.level == 1
+    and (header.classes:includes("appendix") or header.identifier == "appendix")
+end
+
+local function mark_appendix_uncounted(blocks)
+  local in_appendix = false
+  for _, block in ipairs(blocks) do
+    if block.t == "Header" and block.level <= 2 then
+      if not in_appendix and is_appendix_start(block) then
+        in_appendix = true
+      end
+      if in_appendix and block.attributes["visibility"] == nil then
+        block.attributes["visibility"] = "uncounted"
+      end
+    end
+  end
+  return blocks
+end
+
 local function build_agendas(blocks)
   local output = pandoc.List()
   local current = 0
   local index = 1
+
+  blocks = mark_appendix_uncounted(blocks)
 
   while index <= #blocks do
     local block = blocks[index]

@@ -69,7 +69,12 @@ async function auditShowcase(page, url, mode) {
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     };
 
-    const slides = globalThis.Reveal.getSlides();
+    // Query the DOM rather than Reveal.getSlides(): the audit must also cover
+    // appendix slides, which are uncounted and absent from Reveal's list. The
+    // class filter drops Pandoc's bare wrapper sections, which are not slides.
+    const slides = [...document.querySelectorAll(".reveal .slides section")].filter(
+      (section) => section.classList.contains("slide") || section.id === "title-slide",
+    );
     const overflow = [];
     const collisions = [];
     const agendaFailures = [];
@@ -394,6 +399,39 @@ try {
   });
   assertAudit("narrow-live", narrow, false);
   await narrowPage.close();
+
+  // The slide counter must exclude appendix slides: uncounted sections are
+  // outside the total, and the shown number freezes on appendix slides.
+  const counterPage = await newAuditPage({ width: 1600, height: 900 });
+  await counterPage.goto(deckUrl.href, { waitUntil: "domcontentloaded" });
+  await counterPage.waitForFunction(() => globalThis.Reveal?.isReady());
+  const counter = await counterPage.evaluate(() => {
+    const sections = [...document.querySelectorAll(".reveal .slides section")].filter(
+      (section) => section.classList.contains("slide") || section.id === "title-slide",
+    );
+    const appendix = sections.filter((s) => s.dataset.visibility === "uncounted");
+    const counted = sections.length - appendix.length;
+    const total = globalThis.Reveal.getTotalSlides();
+    const indices = globalThis.Reveal.getIndices(document.querySelector("#appendix-placebo"));
+    globalThis.Reveal.slide(indices.h, indices.v);
+    const shown = document.querySelector(".slide-number")?.textContent.replace(/\s+/g, "") ?? "";
+    return { appendixCount: appendix.length, counted, total, shown };
+  });
+  if (counter.appendixCount === 0) {
+    throw new Error("showcase appendix slides are not marked uncounted");
+  }
+  if (counter.total !== counter.counted) {
+    throw new Error(
+      `slide counter total ${counter.total} does not exclude the appendix (expected ${counter.counted})`,
+    );
+  }
+  if (counter.shown !== `${counter.counted}/${counter.counted}`) {
+    throw new Error(
+      `appendix slide shows counter "${counter.shown}" instead of freezing at ` +
+        `${counter.counted}/${counter.counted}`,
+    );
+  }
+  await counterPage.close();
 
   deckUrl.search = "?pdf=handout&handout=true&pdfSeparateFragments=false";
   const handoutPage = await newAuditPage({ width: 1600, height: 900 });

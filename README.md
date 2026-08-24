@@ -83,6 +83,12 @@ theme. Omitted values inherit the defaults. Invalid values produce a warning
 and are ignored. Add `.no-agenda` to an individual level-one heading to omit
 its generated agenda slide, or set `agenda.enabled: false` for the whole deck.
 
+A `# Appendix` section (or any level-one heading carrying `.appendix`) marks
+the start of backup material: every slide from there on is excluded from the
+slide counter, so the total reflects the talk and the number freezes while
+presenting appendix slides. The slides themselves remain fully navigable and
+appear in PDFs; an explicit `visibility` attribute on a slide still wins.
+
 Keep native Reveal and Quarto settings—such as footer, logo, dimensions,
 transition, and slide numbers—under the format rather than duplicating them in
 `altmejd-slides`.
