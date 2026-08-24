@@ -49,6 +49,13 @@ italic) with their OFL licenses in `resources/fonts/`, registered as an HTML
 dependency. The system stacks remain as fallbacks only; rendered decks and
 captured PDFs use the bundled faces on every host.
 
+An appendix boundary — the first level-one heading with identifier or class
+`appendix` — makes the filter set Reveal's native `visibility="uncounted"` on
+every subsequent slide heading that lacks its own visibility attribute. Reveal
+then excludes those slides from the slide-number total and freezes the shown
+count, while navigation, speaker notes, and PDF capture treat them as normal
+slides. No custom counter code is involved.
+
 Automatic agendas are on by default, without a visible heading or list markers.
 The same Lua filter collects level-one headings, inserts the configured agenda
 content for each section divider, and treats direct section content as a kicker.
