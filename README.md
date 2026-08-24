@@ -28,7 +28,7 @@ quarto update adamaltmejd/altmejd-slides
 Pin a deck to a released extension when reproducibility matters:
 
 ```sh
-quarto add adamaltmejd/altmejd-slides@v0.6.1
+quarto add adamaltmejd/altmejd-slides@v0.6.2
 ```
 
 The complete copyable front matter lives in [`template.qmd`](template.qmd).
