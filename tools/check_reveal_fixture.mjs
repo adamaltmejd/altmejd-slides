@@ -255,7 +255,6 @@ try {
         slideClasses: asideSlide.className,
         slideSize: [asideSlide.offsetWidth, asideSlide.offsetHeight],
         scale: globalThis.Reveal.getScale(),
-        watchdog: globalThis.__altmejdDiag ?? null,
       },
       asideReserved:
         asideSlide.classList.contains("has-altmejd-aside") &&

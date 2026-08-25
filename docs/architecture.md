@@ -108,10 +108,9 @@ activates the default `transition-property: all`), which collapsed stretch
 images to zero on any OS reporting reduced motion — Windows with animation
 effects off, macOS Reduce Motion. Reduced motion therefore disables
 transitions entirely, and CI drives every browser check under real Edge on
-a Windows runner, whose reduced-motion environment caught the bug. As
-defense in depth, a watchdog heals a loaded stretch image rendering at
-near-zero height despite free space by requesting a fresh layout, appending
-a geometry snapshot to `window.__altmejdDiag` for diagnosis.
+a Windows runner, whose reduced-motion environment caught the bug. There is
+deliberately no runtime self-healing for layout anomalies: silent recovery
+would mask regressions that the checks and field reports should surface.
 
 The runtime disables Reveal 5.1's automatic narrow-screen scroll view. Quarto's
 vertical section stacks are otherwise promoted to extra scroll pages and break
