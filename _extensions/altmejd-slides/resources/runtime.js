@@ -249,20 +249,31 @@
     window.__altmejdDiag = diagnostics;
     let healCount = 0;
 
+    // The failure is "tiny despite free space": a crowded slide (handout
+    // notes, asides) may legitimately leave a stretch image little room, so
+    // only flag an image that stayed tiny while the slide had 200+ unscaled
+    // pixels to give it.
     const collapsedStretchImages = (slide, scale) =>
       Array.from(slide.querySelectorAll(":scope > img.r-stretch, :scope > img.stretch")).filter(
         (img) => {
           if (!img.complete || img.naturalHeight === 0) {
             return false;
           }
-          const clamp = Number.parseFloat(
-            img.style.getPropertyValue("--altmejd-stretch-max-height"),
-          );
-          // A deliberate small clamp (crowded slide) is not the failure.
-          if (Number.isFinite(clamp) && clamp <= 80) {
+          const height = img.getBoundingClientRect().height / scale;
+          if (height >= 40) {
             return false;
           }
-          return img.getBoundingClientRect().height / scale < 40;
+          const slideStyle = getComputedStyle(slide);
+          const padding =
+            (Number.parseFloat(slideStyle.paddingTop) || 0) +
+            (Number.parseFloat(slideStyle.paddingBottom) || 0);
+          const occupied = Array.from(slide.children).reduce((sum, child) => {
+            if (child === img || getComputedStyle(child).position === "absolute") {
+              return sum;
+            }
+            return sum + child.offsetHeight;
+          }, 0);
+          return slide.offsetHeight - padding - occupied - height > 200;
         },
       );
 
@@ -318,8 +329,9 @@
       }
       console.warn(
         "altmejd-slides: stretch image collapsed; re-running layout " +
-          "(diagnostics in window.__altmejdDiag)",
-        diagnostics[diagnostics.length - 1],
+          `(diagnostics in window.__altmejdDiag) ${JSON.stringify(
+            diagnostics[diagnostics.length - 1],
+          )}`,
       );
       window.Reveal.layout?.();
       queueUpdate(slide);
