@@ -241,6 +241,22 @@ try {
         directJumpImage.naturalWidth > 0 &&
         directJumpImageRect.width > 100 &&
         directJumpImageRect.height > 100,
+      // Raw geometry for cross-platform debugging: Edge on Windows has
+      // rendered this stretch image collapsed while other images were fine.
+      directJumpDebug: {
+        complete: directJumpImage.complete,
+        natural: [directJumpImage.naturalWidth, directJumpImage.naturalHeight],
+        rect: [Math.round(directJumpImageRect.width), Math.round(directJumpImageRect.height)],
+        inline: directJumpImage.getAttribute("style") || "",
+        classes: directJumpImage.className,
+        src: (directJumpImage.getAttribute("src") || "").split("/").pop(),
+        currentSrc: (directJumpImage.currentSrc || "").split("/").pop(),
+        slideStyle: asideSlide.getAttribute("style") || "",
+        slideClasses: asideSlide.className,
+        slideSize: [asideSlide.offsetWidth, asideSlide.offsetHeight],
+        scale: globalThis.Reveal.getScale(),
+        watchdog: globalThis.__altmejdDiag ?? null,
+      },
       asideReserved:
         asideSlide.classList.contains("has-altmejd-aside") &&
         asideSlide.classList.contains("has-altmejd-navigation") &&
