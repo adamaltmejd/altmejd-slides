@@ -313,6 +313,11 @@
       if (!slide || slide.offsetWidth === 0) {
         return;
       }
+      // Mid-transition rects are compressed by the 3D transform and would
+      // read as a collapse; wait for a settled tick.
+      if (isMidTransition(slide)) {
+        return;
+      }
       const scale = window.Reveal.getScale?.() || 1;
       const collapsed = collapsedStretchImages(slide, scale);
       if (collapsed.length === 0) {
