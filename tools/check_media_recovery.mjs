@@ -133,6 +133,41 @@ try {
     throw new Error("watchdog healed without recording a diagnostic snapshot");
   }
   console.log(JSON.stringify({ name: "stretch-watchdog", healed, diagnostics }));
+
+  // Regression: under prefers-reduced-motion the theme once set a 0.01ms
+  // transition-duration on every element, which activates the default
+  // `transition-property: all`; Reveal's stretch measurement then read
+  // mid-transition heights and collapsed stretched images to zero on any OS
+  // with animations disabled. Reduced motion must not create transitions.
+  const reducedPage = await browser.newPage();
+  await reducedPage.setViewport({ width: 1600, height: 900, deviceScaleFactor: 1 });
+  await reducedPage.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
+  await reducedPage.goto(`http://127.0.0.1:${port}/${entry}#/descriptive-pattern`, {
+    waitUntil: "domcontentloaded",
+  });
+  await reducedPage.waitForFunction(() => globalThis.Reveal?.isReady());
+  const reduced = await reducedPage.evaluate(async () => {
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    );
+    const img = globalThis.Reveal.getCurrentSlide().querySelector(":scope > img");
+    const style = getComputedStyle(img);
+    return {
+      matches: matchMedia("(prefers-reduced-motion: reduce)").matches,
+      height: Math.round(img.getBoundingClientRect().height),
+      transition: `${style.transitionProperty} ${style.transitionDuration}`,
+    };
+  });
+  if (!reduced.matches) {
+    throw new Error("reduced-motion emulation did not take effect");
+  }
+  if (reduced.height < 100) {
+    throw new Error(
+      `stretch image collapsed under prefers-reduced-motion: ${JSON.stringify(reduced)}`,
+    );
+  }
+  console.log(JSON.stringify({ name: "reduced-motion", ...reduced }));
+  await reducedPage.close();
 } finally {
   await browser.close();
   server.close();
