@@ -237,6 +237,94 @@
       }, MEDIA_RETRY_DELAYS[mediaRetry.attempt]);
     };
 
+    // Watchdog for an intermittently reported failure (Edge/Windows) where a
+    // fully loaded stretch image on the current slide renders at near-zero
+    // height — flashing once, then collapsing — while the rest of the slide
+    // is intact. The trigger has resisted reproduction on healthy hardware,
+    // but Reveal re-derives stretch sizes on every layout pass, so navigating
+    // away and back always healed it. Detect the state, keep a diagnostic
+    // snapshot in window.__altmejdDiag for the eventual root cause, and ask
+    // Reveal for another layout.
+    const diagnostics = [];
+    window.__altmejdDiag = diagnostics;
+    let healCount = 0;
+
+    const collapsedStretchImages = (slide, scale) =>
+      Array.from(slide.querySelectorAll(":scope > img.r-stretch, :scope > img.stretch")).filter(
+        (img) => {
+          if (!img.complete || img.naturalHeight === 0) {
+            return false;
+          }
+          const clamp = Number.parseFloat(
+            img.style.getPropertyValue("--altmejd-stretch-max-height"),
+          );
+          // A deliberate small clamp (crowded slide) is not the failure.
+          if (Number.isFinite(clamp) && clamp <= 80) {
+            return false;
+          }
+          return img.getBoundingClientRect().height / scale < 40;
+        },
+      );
+
+    const snapshotSlide = (slide, scale, images) => ({
+      time: Math.round(performance.now()),
+      slide: slide.id || "(anonymous)",
+      scale,
+      viewport: [window.innerWidth, window.innerHeight],
+      devicePixelRatio: window.devicePixelRatio,
+      fonts: document.fonts?.status,
+      slideSize: [slide.offsetWidth, slide.offsetHeight],
+      slideStyle: slide.getAttribute("style") || "",
+      children: Array.from(slide.children, (child) => ({
+        tag: child.tagName,
+        classes: String(child.className).slice(0, 60),
+        offsetHeight: child.offsetHeight,
+        rectHeight: Math.round(child.getBoundingClientRect().height),
+        style: (child.getAttribute("style") || "").slice(0, 160),
+      })),
+      images: images.map((img) => ({
+        src: (img.getAttribute("src") || "").split("/").pop(),
+        natural: [img.naturalWidth, img.naturalHeight],
+        rect: [
+          Math.round(img.getBoundingClientRect().width),
+          Math.round(img.getBoundingClientRect().height),
+        ],
+        inline: img.getAttribute("style") || "",
+        maxHeight: getComputedStyle(img).maxHeight,
+      })),
+    });
+
+    setInterval(() => {
+      if (document.hidden || window.Reveal?.isPrintView?.()) {
+        return;
+      }
+      const slide = window.Reveal?.getCurrentSlide?.();
+      if (!slide || slide.offsetWidth === 0) {
+        return;
+      }
+      const scale = window.Reveal.getScale?.() || 1;
+      const collapsed = collapsedStretchImages(slide, scale);
+      if (collapsed.length === 0) {
+        healCount = 0;
+        return;
+      }
+      if (healCount >= 4) {
+        return;
+      }
+      healCount += 1;
+      diagnostics.push(snapshotSlide(slide, scale, collapsed));
+      if (diagnostics.length > 20) {
+        diagnostics.shift();
+      }
+      console.warn(
+        "altmejd-slides: stretch image collapsed; re-running layout " +
+          "(diagnostics in window.__altmejdDiag)",
+        diagnostics[diagnostics.length - 1],
+      );
+      window.Reveal.layout?.();
+      queueUpdate(slide);
+    }, 1000);
+
     const recoverBrokenMedia = (slide) => {
       if (mediaRetry.timer !== null) {
         clearTimeout(mediaRetry.timer);

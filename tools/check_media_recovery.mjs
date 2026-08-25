@@ -103,6 +103,36 @@ try {
   console.log(
     JSON.stringify({ name: "media-recovery", initial, recovered, retried: attempts.size }),
   );
+
+  // Watchdog: a loaded stretch image forced to near-zero height (the
+  // reported Edge/Windows collapse, trigger unknown) must be healed by a
+  // fresh Reveal layout within a few seconds, and the diagnostic buffer must
+  // record the broken geometry.
+  await page.evaluate(() => {
+    const img = globalThis.Reveal.getCurrentSlide().querySelector(":scope > img.r-stretch");
+    img.style.height = "12px";
+    img.style.width = "27px";
+  });
+  const healDeadline = Date.now() + 8000;
+  let healed = null;
+  while (Date.now() < healDeadline) {
+    const state = await snapshot();
+    if (state.every((img) => img.height > 100)) {
+      healed = state;
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  if (!healed) {
+    throw new Error(
+      `watchdog did not heal a collapsed stretch image: ${JSON.stringify(await snapshot())}`,
+    );
+  }
+  const diagnostics = await page.evaluate(() => globalThis.__altmejdDiag?.length ?? 0);
+  if (diagnostics === 0) {
+    throw new Error("watchdog healed without recording a diagnostic snapshot");
+  }
+  console.log(JSON.stringify({ name: "stretch-watchdog", healed, diagnostics }));
 } finally {
   await browser.close();
   server.close();

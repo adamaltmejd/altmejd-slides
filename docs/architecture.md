@@ -101,6 +101,13 @@ flaky network. The runtime re-requests broken images on the current slide:
 immediately at reveal, on a short backoff, and when the browser comes back
 online. A successful retry reruns Reveal's stretch layout.
 
+A watchdog complements the retry: a fully loaded stretch image on the
+current slide rendering at near-zero height (an intermittently reported
+Edge/Windows collapse whose trigger has resisted reproduction) is healed by
+requesting a fresh Reveal layout, and each occurrence appends a geometry
+snapshot to `window.__altmejdDiag` so a field report can identify the root
+cause. Deliberately small clamps on crowded slides are exempt.
+
 The runtime disables Reveal 5.1's automatic narrow-screen scroll view. Quarto's
 vertical section stacks are otherwise promoted to extra scroll pages and break
 the title and panel layouts. Phones therefore receive the intact scaled slide
