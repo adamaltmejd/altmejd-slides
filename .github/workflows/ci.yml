@@ -88,6 +88,14 @@ jobs:
           path: output/pdf/tests/fixtures/*.pdf
           if-no-files-found: error
 
+      - name: Upload rendered site for cross-platform checks
+        uses: actions/upload-artifact@v7
+        with:
+          name: rendered-site
+          path: _site
+          retention-days: 3
+          if-no-files-found: error
+
       - name: Configure GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v6
@@ -101,6 +109,38 @@ jobs:
         uses: actions/upload-pages-artifact@v5
         with:
           path: _site/examples
+
+  # The theme's field failures have been Windows-specific (Edge font metrics,
+  # DPI handling, scheduler timing). Re-run every browser check against the
+  # ubuntu-rendered site with real Microsoft Edge on a Windows runner.
+  windows-edge:
+    needs: validate
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install locked JavaScript tools
+        run: bun install --frozen-lockfile
+
+      - name: Download rendered site
+        uses: actions/download-artifact@v7
+        with:
+          name: rendered-site
+          path: _site
+
+      - name: Run browser checks in Edge on Windows
+        shell: bash
+        run: |
+          edge_path="C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
+          test -f "$edge_path"
+          CHROME_PATH="$edge_path" bun run test:browser
 
   deploy-pages:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
