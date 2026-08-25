@@ -101,12 +101,17 @@ flaky network. The runtime re-requests broken images on the current slide:
 immediately at reveal, on a short backoff, and when the browser comes back
 online. A successful retry reruns Reveal's stretch layout.
 
-A watchdog complements the retry: a fully loaded stretch image on the
-current slide rendering at near-zero height (an intermittently reported
-Edge/Windows collapse whose trigger has resisted reproduction) is healed by
-requesting a fresh Reveal layout, and each occurrence appends a geometry
-snapshot to `window.__altmejdDiag` so a field report can identify the root
-cause. Deliberately small clamps on crowded slides are exempt.
+Reveal's stretch sizing measures synchronously, so any CSS transition on
+layout properties poisons it: the theme's reduced-motion rule once created
+`transition: all 0.01ms` on every element (the common accessibility snippet
+activates the default `transition-property: all`), which collapsed stretch
+images to zero on any OS reporting reduced motion — Windows with animation
+effects off, macOS Reduce Motion. Reduced motion therefore disables
+transitions entirely, and CI drives every browser check under real Edge on
+a Windows runner, whose reduced-motion environment caught the bug. As
+defense in depth, a watchdog heals a loaded stretch image rendering at
+near-zero height despite free space by requesting a fresh layout, appending
+a geometry snapshot to `window.__altmejdDiag` for diagnosis.
 
 The runtime disables Reveal 5.1's automatic narrow-screen scroll view. Quarto's
 vertical section stacks are otherwise promoted to extra scroll pages and break
