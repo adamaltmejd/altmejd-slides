@@ -188,6 +188,65 @@
         queueUpdate(slide);
       }
     });
+    // Reveal assigns lazy `data-src` images their real src only when a slide
+    // comes within view distance, so the network request often fires at
+    // reveal time. If that request fails (flaky venue Wi-Fi), the image ends
+    // up complete-but-empty and neither the browser nor Reveal ever retries:
+    // the slide stays blank. Re-request broken images on the current slide —
+    // once immediately and then on a short backoff — and rerun Reveal's
+    // stretch layout when a retry succeeds.
+    const MEDIA_RETRY_DELAYS = [1500, 4000, 10000];
+    let mediaRetry = { timer: null, attempt: 0 };
+
+    const brokenImages = (slide) =>
+      Array.from(slide.querySelectorAll("img")).filter((img) => {
+        const source = img.getAttribute("src");
+        return img.complete && img.naturalWidth === 0 && source && !source.startsWith("data:");
+      });
+
+    const retryBrokenImages = (slide) => {
+      const broken = brokenImages(slide);
+      broken.forEach((img) => {
+        const source = img.getAttribute("src");
+        img.addEventListener(
+          "load",
+          () => {
+            window.Reveal?.layout?.();
+            queueUpdate(slide);
+          },
+          { once: true },
+        );
+        // Setting an identical src is a no-op; remove it first so the load
+        // algorithm runs again with the original, cacheable URL.
+        img.removeAttribute("src");
+        img.setAttribute("src", source);
+      });
+      return broken.length;
+    };
+
+    const scheduleMediaRecovery = (slide) => {
+      if (mediaRetry.timer !== null || mediaRetry.attempt >= MEDIA_RETRY_DELAYS.length) {
+        return;
+      }
+      mediaRetry.timer = setTimeout(() => {
+        mediaRetry.timer = null;
+        mediaRetry.attempt += 1;
+        if (retryBrokenImages(slide) > 0) {
+          scheduleMediaRecovery(slide);
+        }
+      }, MEDIA_RETRY_DELAYS[mediaRetry.attempt]);
+    };
+
+    const recoverBrokenMedia = (slide) => {
+      if (mediaRetry.timer !== null) {
+        clearTimeout(mediaRetry.timer);
+      }
+      mediaRetry = { timer: null, attempt: 0 };
+      if (retryBrokenImages(slide) > 0) {
+        scheduleMediaRecovery(slide);
+      }
+    };
+
     const observeSlideBoxes = (slide) => {
       resizeObserver.disconnect();
       const aside = directAside(slide);
@@ -216,7 +275,18 @@
             },
             { once: true },
           );
-          media.addEventListener("error", () => queueUpdate(slide), { once: true });
+          media.addEventListener(
+            "error",
+            () => {
+              queueUpdate(slide);
+              // An in-flight request that fails after reveal joins the same
+              // backoff chain instead of retrying immediately (no tight loop).
+              if (media.matches("img")) {
+                scheduleMediaRecovery(slide);
+              }
+            },
+            { once: true },
+          );
         }
       });
     };
@@ -224,10 +294,18 @@
     window.Reveal.on("ready", (event) => {
       observeSlideBoxes(event.currentSlide);
       queueUpdate(event.currentSlide);
+      recoverBrokenMedia(event.currentSlide);
     });
     window.Reveal.on("slidechanged", (event) => {
       observeSlideBoxes(event.currentSlide);
       queueUpdate(event.currentSlide);
+      recoverBrokenMedia(event.currentSlide);
+    });
+    window.addEventListener("online", () => {
+      const slide = window.Reveal?.getCurrentSlide?.();
+      if (slide) {
+        recoverBrokenMedia(slide);
+      }
     });
     // Animated transitions settle after slidechanged; measure again once the
     // slide's geometry is final. Fires only when a CSS transition actually ran.
@@ -239,6 +317,7 @@
       const slide = window.Reveal.getCurrentSlide();
       observeSlideBoxes(slide);
       queueUpdate(slide);
+      recoverBrokenMedia(slide);
     }
 
     if (document.fonts?.ready) {

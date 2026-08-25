@@ -17,6 +17,7 @@ import {
   deriveZone,
   gatewayWorkerScript,
   gatewayWranglerConfig,
+  headersFileContent,
   type PublishArtifact,
   planStaging,
   publicUrl,
@@ -508,6 +509,9 @@ async function stageDeck(
     await Deno.copyFile(artifact.source, targetPath);
     console.log(`artifact ${artifact.name}: ${publicUrl(target)}${artifact.target}`);
   }
+
+  // Served for every asset beneath the deck's routes; see headersFileContent.
+  await Deno.writeTextFile(`${publicDir}/_headers`, headersFileContent());
 
   console.log(
     `staged ${plan.directories.length + cssPlan.directories.length} directories, ` +

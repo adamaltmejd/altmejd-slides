@@ -363,3 +363,14 @@ export function gatewayWorkerScript(): string {
 export function publicUrl(target: CloudflareTarget): string {
   return `https://${target.host}/${target.slug}/`;
 }
+
+// Presentations get viewed on unreliable venue networks. Cloudflare's default
+// asset response (`max-age=0, must-revalidate`) demands a network round-trip
+// for every view and forbids serving the cached copy when that trip fails, so
+// even a previously-loaded figure can vanish mid-talk. stale-while-revalidate
+// keeps content fresh (every view still revalidates in the background) while
+// letting the browser serve — and keep — its cached copy when the network
+// drops a request.
+export function headersFileContent(): string {
+  return ["/*", "  Cache-Control: public, max-age=0, stale-while-revalidate=604800", ""].join("\n");
+}

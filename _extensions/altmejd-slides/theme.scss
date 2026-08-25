@@ -1532,6 +1532,12 @@ body .slide-menu-wrapper li.slide-menu-item-vertical:hover {
   .reveal *::before,
   .reveal *::after {
     scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
+    // Not the usual 0.01ms-duration snippet: `transition-duration` alone
+    // activates the default `transition-property: all` on every element, and
+    // Reveal's stretch sizing then reads mid-transition heights during its
+    // measure pass — collapsing stretched images to zero on any OS with
+    // animations disabled (Windows "Animation effects" off, macOS Reduce
+    // Motion). No transitions at all is both accessible and measurable.
+    transition: none !important;
   }
 }

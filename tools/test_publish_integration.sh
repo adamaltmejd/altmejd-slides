@@ -92,6 +92,10 @@ quarto run "$publisher" --no-verify --keep-staging --staging-dir "$staging" ||
 test -f "$staging/public/fixture26/index.html" || fail "entry not staged as <slug>/index.html"
 test -f "$staging/public/fixture26/assets/dot.svg" || fail "referenced asset not staged"
 test -d "$staging/public/fixture26/mytalk_files" || fail "Quarto dependency tree not staged"
+test -f "$staging/public/_headers" || fail "_headers not staged at the asset root"
+if ! grep -q "stale-while-revalidate" "$staging/public/_headers"; then
+  fail "_headers does not allow stale service on failed revalidation"
+fi
 test -f ".altmejd-slides-publish.json" || fail "publish state file not written"
 
 grep -q "deploy --config" "$FAKE_WRANGLER_LOG" || fail "wrangler deploy was not invoked"

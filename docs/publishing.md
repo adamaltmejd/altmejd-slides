@@ -153,6 +153,24 @@ Run `make publish` again. Unchanged content is detected by hash and skipped;
 changed content deploys a new version of that talk's Worker only. Asset
 uploads are content-addressed, so only changed files transfer.
 
+## Presenting on unreliable networks
+
+Published decks are hardened for flaky venue Wi-Fi in two layers. The
+publisher stages a `_headers` file that serves every asset with
+`Cache-Control: public, max-age=0, stale-while-revalidate=604800`: each view
+still revalidates so a republish shows up immediately, but the browser paints
+its cached copy first and keeps it when the network drops the request —
+Cloudflare's default `must-revalidate` policy instead blanks previously
+loaded figures the moment a revalidation fails. Independently, the format's
+runtime re-requests any image that failed to load (Reveal assigns lazy image
+sources at reveal time and never retries a failure): once when the slide is
+shown, then on a short backoff, and again when the browser reports the
+network came back.
+
+A cached page still cannot survive every failure mode; for a talk where the
+network is known to be bad, keep the published `slides.pdf` artifact or a
+local render as the fallback.
+
 ## Rollback
 
 Each talk keeps Cloudflare's version history:
