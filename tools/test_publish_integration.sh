@@ -392,6 +392,21 @@ PY
 grep -q "skipping deploy" "$work_dir/verify-skip.log" ||
   fail "verified unchanged republish was not skipped"
 
+# A malformed state file must fail explicitly before any Cloudflare operation.
+malformed_deck="$work_dir/malformed-deck"
+mkdir -p "$malformed_deck"
+printf '{"version":1,"decks":null}\n' >"$malformed_deck/.altmejd-slides-publish.json"
+: >"$FAKE_WRANGLER_LOG"
+if (cd "$malformed_deck" &&
+  quarto run "$publisher" --unpublish --slug malformed --confirm malformed) \
+  >"$work_dir/unpublish-malformed.log" 2>&1; then
+  fail "unpublish accepted a malformed publish state"
+fi
+grep -q "invalid publish state in .altmejd-slides-publish.json" \
+  "$work_dir/unpublish-malformed.log" ||
+  fail "malformed publish state lacked an explicit error"
+test ! -s "$FAKE_WRANGLER_LOG" || fail "malformed publish state contacted Wrangler"
+
 # --- unpublish deletes only a recorded Worker and then updates state --------
 # Unpublishing uses the recorded state and must not need a source deck or render.
 mv "$verify_deck/talk.qmd" "$verify_deck/talk.qmd.archived"

@@ -327,15 +327,36 @@ interface PublishState {
 }
 
 async function readState(): Promise<PublishState> {
+  let source: string;
   try {
-    const parsed = JSON.parse(await Deno.readTextFile(STATE_FILE)) as PublishState;
-    if (parsed.version === 1 && typeof parsed.decks === "object") {
-      return parsed;
+    source = await Deno.readTextFile(STATE_FILE);
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) {
+      return { version: 1, decks: {} };
     }
-  } catch {
-    // fall through to a fresh state
+    fail(`could not read ${STATE_FILE}`);
   }
-  return { version: 1, decks: {} };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(source);
+  } catch {
+    fail(`invalid publish state in ${STATE_FILE}; refusing to continue`);
+  }
+  if (
+    typeof parsed === "object" &&
+    parsed !== null &&
+    !Array.isArray(parsed) &&
+    "version" in parsed &&
+    parsed.version === 1 &&
+    "decks" in parsed &&
+    typeof parsed.decks === "object" &&
+    parsed.decks !== null &&
+    !Array.isArray(parsed.decks)
+  ) {
+    return { version: 1, decks: parsed.decks as Record<string, DeckRecord> };
+  }
+  fail(`invalid publish state in ${STATE_FILE}; refusing to continue`);
 }
 
 async function writeState(state: PublishState): Promise<void> {
