@@ -24,6 +24,7 @@ import {
   resolveArtifacts,
   resolveInput,
   resolveTarget,
+  validateSlug,
   workerName,
 } from "./publish/core.ts";
 
@@ -31,6 +32,8 @@ const STATE_FILE = ".altmejd-slides-publish.json";
 
 interface Options {
   bootstrapGateway: boolean;
+  unpublish: boolean;
+  confirm?: string;
   input?: string;
   slug?: string;
   host?: string;
@@ -50,6 +53,8 @@ function usage(): string {
     "  --input <deck.qmd>    deck source (required when several QMDs exist)",
     "  --slug <slug>         override the public path segment",
     "  --bootstrap-gateway   deploy the shared gateway Worker for the host",
+    "  --unpublish           delete a talk Worker recorded by this project",
+    "  --confirm <slug>       confirm that slug when unpublishing non-interactively",
     "  --host <host>         override or supply the publish host",
     "  --zone <zone>         Cloudflare zone (default: host minus first label)",
     "  --stage-only          render, stage, and validate without deploying",
@@ -64,6 +69,7 @@ function usage(): string {
 function parseArgs(args: string[]): Options {
   const opts: Options = {
     bootstrapGateway: false,
+    unpublish: false,
     stageOnly: false,
     keepStaging: false,
     noVerify: false,
@@ -82,6 +88,12 @@ function parseArgs(args: string[]): Options {
     switch (arg) {
       case "--bootstrap-gateway":
         opts.bootstrapGateway = true;
+        break;
+      case "--unpublish":
+        opts.unpublish = true;
+        break;
+      case "--confirm":
+        opts.confirm = value();
         break;
       case "--input":
         opts.input = value();
@@ -122,6 +134,12 @@ function parseArgs(args: string[]): Options {
         fail(`unknown option ${arg}\n\n${usage()}`);
     }
   }
+  if (opts.bootstrapGateway && opts.unpublish) {
+    fail("--bootstrap-gateway and --unpublish cannot be used together");
+  }
+  if (!opts.unpublish && opts.confirm !== undefined) {
+    fail("--confirm can only be used with --unpublish");
+  }
   return opts;
 }
 
@@ -132,11 +150,12 @@ function fail(message: string): never {
 
 async function run(
   cmd: string[],
-  opts: { capture?: boolean; cwd?: string } = {},
+  opts: { capture?: boolean; cwd?: string; stdin?: "inherit" } = {},
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   const command = new Deno.Command(cmd[0], {
     args: cmd.slice(1),
     cwd: opts.cwd,
+    stdin: opts.stdin ?? "null",
     stdout: opts.capture ? "piped" : "inherit",
     stderr: opts.capture ? "piped" : "inherit",
   });
@@ -291,6 +310,9 @@ interface DeckRecord {
   worker: string;
   host: string;
   zone?: string;
+  // Added after v0.6.3 so destructive operations stay pinned to the account
+  // that deployed the Worker. Legacy records require an explicit account ID.
+  accountId?: string;
   contentHash: string;
   published: string;
   // "pending": deployed but the public URL never answered (e.g. DNS still
@@ -305,15 +327,36 @@ interface PublishState {
 }
 
 async function readState(): Promise<PublishState> {
+  let source: string;
   try {
-    const parsed = JSON.parse(await Deno.readTextFile(STATE_FILE)) as PublishState;
-    if (parsed.version === 1 && typeof parsed.decks === "object") {
-      return parsed;
+    source = await Deno.readTextFile(STATE_FILE);
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) {
+      return { version: 1, decks: {} };
     }
-  } catch {
-    // fall through to a fresh state
+    fail(`could not read ${STATE_FILE}`);
   }
-  return { version: 1, decks: {} };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(source);
+  } catch {
+    fail(`invalid publish state in ${STATE_FILE}; refusing to continue`);
+  }
+  if (
+    typeof parsed === "object" &&
+    parsed !== null &&
+    !Array.isArray(parsed) &&
+    "version" in parsed &&
+    parsed.version === 1 &&
+    "decks" in parsed &&
+    typeof parsed.decks === "object" &&
+    parsed.decks !== null &&
+    !Array.isArray(parsed.decks)
+  ) {
+    return { version: 1, decks: parsed.decks as Record<string, DeckRecord> };
+  }
+  fail(`invalid publish state in ${STATE_FILE}; refusing to continue`);
 }
 
 async function writeState(state: PublishState): Promise<void> {
@@ -350,10 +393,62 @@ async function hashStagedContent(root: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function workerExists(wrangler: string[], name: string): Promise<boolean> {
-  const result = await run([...wrangler, "deployments", "list", "--name", name], {
+function explicitCloudflareAccountId(): string | undefined {
+  const value = Deno.env.get("CLOUDFLARE_ACCOUNT_ID")?.trim();
+  return value === "" ? undefined : value;
+}
+
+async function resolveCloudflareAccountId(wrangler: string[], cwd: string): Promise<string> {
+  const explicit = explicitCloudflareAccountId();
+  if (explicit !== undefined) {
+    return explicit;
+  }
+
+  const result = await run([...wrangler, "whoami", "--json", "--cwd", cwd], {
     capture: true,
   });
+  if (result.code !== 0) {
+    fail(
+      "could not resolve the Cloudflare account ID; set CLOUDFLARE_ACCOUNT_ID explicitly:\n" +
+        result.stderr.trim(),
+    );
+  }
+  let parsed: { accounts?: unknown };
+  try {
+    parsed = JSON.parse(result.stdout) as { accounts?: unknown };
+  } catch {
+    fail("wrangler whoami --json did not return valid JSON");
+  }
+  const accountIds = Array.isArray(parsed.accounts)
+    ? parsed.accounts
+        .map((account) =>
+          typeof account === "object" && account !== null && "id" in account
+            ? (account as { id?: unknown }).id
+            : undefined,
+        )
+        .filter((id): id is string => typeof id === "string" && id.trim() !== "")
+    : [];
+  if (accountIds.length === 1) {
+    return accountIds[0];
+  }
+  if (accountIds.length === 0) {
+    fail("wrangler reported no usable Cloudflare accounts; set CLOUDFLARE_ACCOUNT_ID explicitly");
+  }
+  fail(
+    "several Cloudflare accounts are available; set CLOUDFLARE_ACCOUNT_ID explicitly " +
+      "so publishing cannot choose the wrong account",
+  );
+}
+
+async function workerExists(
+  wrangler: string[],
+  name: string,
+  configPath: string,
+): Promise<boolean> {
+  const result = await run(
+    [...wrangler, "deployments", "list", "--name", name, "--config", configPath],
+    { capture: true },
+  );
   if (result.code === 0) {
     return true;
   }
@@ -522,18 +617,37 @@ async function stageDeck(
 
 async function deployDeck(opts: Options, target: CloudflareTarget, stagingDir: string) {
   await Deno.writeTextFile(`${stagingDir}/worker.js`, deckWorkerScript(target.slug));
-  await Deno.writeTextFile(
-    `${stagingDir}/wrangler.json`,
-    `${JSON.stringify(deckWranglerConfig(target), null, 2)}\n`,
-  );
 
   const contentHash = await hashStagedContent(`${stagingDir}/public`);
   const state = await readState();
   const known = state.decks[target.slug];
   const name = workerName(target.slug);
 
+  const explicitAccountId = explicitCloudflareAccountId();
+  if (
+    known?.accountId !== undefined &&
+    explicitAccountId !== undefined &&
+    known.accountId !== explicitAccountId
+  ) {
+    fail(
+      `the publish record belongs to Cloudflare account ${known.accountId}, but ` +
+        `CLOUDFLARE_ACCOUNT_ID selects ${explicitAccountId}`,
+    );
+  }
+  if (known !== undefined && known.accountId === undefined && explicitAccountId === undefined) {
+    fail(
+      "this legacy publish record does not identify its Cloudflare account. " +
+        "Set CLOUDFLARE_ACCOUNT_ID to the account that owns the Worker and rerun once.",
+    );
+  }
   const wrangler = await resolveWrangler();
-  const alreadyDeployed = await workerExists(wrangler, name);
+  const accountId = known?.accountId ?? (await resolveCloudflareAccountId(wrangler, stagingDir));
+  const configPath = `${stagingDir}/wrangler.json`;
+  await Deno.writeTextFile(
+    configPath,
+    `${JSON.stringify({ ...deckWranglerConfig(target), account_id: accountId }, null, 2)}\n`,
+  );
+  const alreadyDeployed = await workerExists(wrangler, name, configPath);
 
   // Only --adopt authorizes taking over an unrecorded Worker; --force must
   // not silently clobber a Worker this project never published.
@@ -552,6 +666,11 @@ async function deployDeck(opts: Options, target: CloudflareTarget, stagingDir: s
     known.host === target.host &&
     known.zone === target.zone;
   if (unchanged && !opts.force) {
+    if (known.accountId === undefined) {
+      known.accountId = accountId;
+      await writeState(state);
+      console.log(`bound the legacy publish record to Cloudflare account ${accountId}`);
+    }
     // A deployment whose verification never succeeded (e.g. DNS was still
     // propagating) is retried here without redeploying unchanged content.
     if (known.verification === "pending" && !opts.noVerify) {
@@ -585,6 +704,7 @@ async function deployDeck(opts: Options, target: CloudflareTarget, stagingDir: s
     worker: name,
     host: target.host,
     zone: target.zone,
+    accountId,
     contentHash,
     published: new Date().toISOString(),
     verification: opts.noVerify ? "skipped" : "pending",
@@ -604,6 +724,142 @@ async function deployDeck(opts: Options, target: CloudflareTarget, stagingDir: s
     await writeState(state);
   }
   console.log(`\npublished at: ${publicUrl(target)}`);
+}
+
+async function unpublish(opts: Options): Promise<void> {
+  const incompatible = [
+    opts.input !== undefined ? "--input" : undefined,
+    opts.host !== undefined ? "--host" : undefined,
+    opts.zone !== undefined ? "--zone" : undefined,
+    opts.stageOnly ? "--stage-only" : undefined,
+    opts.stagingDir !== undefined ? "--staging-dir" : undefined,
+    opts.keepStaging ? "--keep-staging" : undefined,
+    opts.noVerify ? "--no-verify" : undefined,
+    opts.force ? "--force" : undefined,
+    opts.adopt ? "--adopt" : undefined,
+  ].filter((flag): flag is string => flag !== undefined);
+  if (incompatible.length > 0) {
+    fail(`--unpublish accepts only --slug and --confirm; remove ${incompatible.join(", ")}`);
+  }
+
+  const state = await readState();
+  const recordedSlugs = Object.keys(state.decks).sort();
+  let slug: string;
+  if (opts.slug !== undefined) {
+    const slugError = validateSlug(opts.slug);
+    if (slugError !== null) {
+      fail(slugError);
+    }
+    slug = opts.slug;
+  } else {
+    if (recordedSlugs.length === 0) {
+      fail(`no published talks are recorded in ${STATE_FILE}`);
+    }
+    if (recordedSlugs.length > 1) {
+      fail(
+        `several published talks are recorded (${recordedSlugs.join(", ")}); ` +
+          "pass --slug to choose one",
+      );
+    }
+    slug = recordedSlugs[0];
+  }
+
+  const known = state.decks[slug];
+  if (known === undefined) {
+    fail(
+      `no published talk with slug "${slug}" is recorded in ${STATE_FILE}; ` +
+        "refusing to delete an unowned Worker",
+    );
+  }
+  const expectedWorker = workerName(slug);
+  if (known.worker !== expectedWorker || typeof known.host !== "string") {
+    fail(
+      `invalid publish record for slug "${slug}"; expected Worker ` +
+        `"${expectedWorker}"; refusing to delete it`,
+    );
+  }
+
+  if (opts.confirm !== undefined) {
+    if (opts.confirm !== slug) {
+      fail(`--confirm must exactly match the recorded slug "${slug}"`);
+    }
+  } else {
+    if (!Deno.stdin.isTerminal()) {
+      fail(
+        "unpublishing requires an interactive terminal. For an intentional " +
+          `non-interactive deletion, pass --confirm ${slug}`,
+      );
+    }
+    const answer = prompt(
+      `Type "${slug}" to unpublish https://${known.host}/${slug}/, or press Enter to cancel:`,
+    );
+    if (answer !== slug) {
+      fail("confirmation did not match; nothing was deleted");
+    }
+  }
+
+  const explicitAccountId = explicitCloudflareAccountId();
+  if (known.accountId === undefined && explicitAccountId === undefined) {
+    fail(
+      "this legacy publish record does not identify its Cloudflare account. " +
+        "Set CLOUDFLARE_ACCOUNT_ID to the account that owns the Worker and retry.",
+    );
+  }
+  if (
+    known.accountId !== undefined &&
+    explicitAccountId !== undefined &&
+    known.accountId !== explicitAccountId
+  ) {
+    fail(
+      `the publish record belongs to Cloudflare account ${known.accountId}, but ` +
+        `CLOUDFLARE_ACCOUNT_ID selects ${explicitAccountId}`,
+    );
+  }
+  const accountId = known.accountId ?? explicitAccountId;
+  if (accountId === undefined) {
+    fail("could not resolve the recorded Cloudflare account");
+  }
+
+  const controlDir = await Deno.makeTempDir({ prefix: "altmejd-unpublish-" });
+  const configPath = `${controlDir}/wrangler.json`;
+  try {
+    await Deno.writeTextFile(
+      configPath,
+      `${JSON.stringify({ name: expectedWorker, account_id: accountId }, null, 2)}\n`,
+    );
+    const wrangler = await resolveWrangler();
+    if (await workerExists(wrangler, expectedWorker, configPath)) {
+      console.log(
+        `unpublishing https://${known.host}/${slug}/ ` +
+          `(Worker "${expectedWorker}", account ${accountId})`,
+      );
+      const deletion = await run(
+        [...wrangler, "delete", "--name", expectedWorker, "--config", configPath],
+        { stdin: "inherit" },
+      );
+      if (deletion.code !== 0) {
+        fail(`wrangler delete failed with exit code ${deletion.code}; local record kept`);
+      }
+      // Wrangler exits successfully when its confirmation is declined. Confirm
+      // the Worker is gone before dropping the ownership record.
+      if (await workerExists(wrangler, expectedWorker, configPath)) {
+        fail(`Worker "${expectedWorker}" still exists; local record kept`);
+      }
+    } else if (known.accountId === undefined) {
+      fail(
+        `legacy record kept: Worker "${expectedWorker}" was not found in the explicitly ` +
+          `selected account ${accountId}`,
+      );
+    } else {
+      console.log(`Worker "${expectedWorker}" is already absent; removing its stale local record`);
+    }
+
+    delete state.decks[slug];
+    await writeState(state);
+    console.log(`unpublished: https://${known.host}/${slug}/`);
+  } finally {
+    await Deno.remove(controlDir, { recursive: true }).catch(() => {});
+  }
 }
 
 async function bootstrapGateway(opts: Options): Promise<void> {
@@ -745,6 +1001,8 @@ async function publish(opts: Options): Promise<void> {
 const opts = parseArgs(Deno.args);
 if (opts.bootstrapGateway) {
   await bootstrapGateway(opts);
+} else if (opts.unpublish) {
+  await unpublish(opts);
 } else {
   await publish(opts);
 }

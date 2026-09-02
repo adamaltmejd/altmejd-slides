@@ -27,6 +27,16 @@ case "${1:-}" in
   --version)
     echo "4.0.0"
     ;;
+  whoami)
+    account_id="${FAKE_WRANGLER_ACCOUNT_ID:-11111111111111111111111111111111}"
+    if [ -n "${FAKE_WRANGLER_SECOND_ACCOUNT_ID:-}" ]; then
+      printf \
+        '{"loggedIn":true,"accounts":[{"id":"%s","name":"One"},{"id":"%s","name":"Two"}]}\n' \
+        "$account_id" "$FAKE_WRANGLER_SECOND_ACCOUNT_ID"
+    else
+      printf '{"loggedIn":true,"accounts":[{"id":"%s","name":"Test"}]}\n' "$account_id"
+    fi
+    ;;
   deployments)
     # deployments list --name <worker>
     name="${4:?}"
@@ -44,6 +54,22 @@ case "${1:-}" in
     touch "$FAKE_WRANGLER_STATE/deployed-$name"
     echo "Deployed $name"
     ;;
+  delete)
+    # delete --name <worker> --config <path>
+    name="${3:?}"
+    config="${5:?}"
+    cp "$config" "$FAKE_WRANGLER_STATE/delete-config-$name.json"
+    if [ -n "${FAKE_WRANGLER_DELETE_FAIL:-}" ]; then
+      echo "simulated delete failure" >&2
+      exit 1
+    fi
+    if [ -n "${FAKE_WRANGLER_DELETE_KEEP:-}" ]; then
+      echo "simulated declined deletion"
+      exit 0
+    fi
+    rm -f "$FAKE_WRANGLER_STATE/deployed-$name"
+    echo "Deleted $name"
+    ;;
   *)
     echo "fake wrangler: unexpected command: $*" >&2
     exit 64
@@ -54,6 +80,7 @@ chmod +x "$fake_bin/wrangler"
 export PATH="$fake_bin:$PATH"
 export FAKE_WRANGLER_LOG="$work_dir/wrangler-calls.log"
 export FAKE_WRANGLER_STATE="$fake_state"
+unset CLOUDFLARE_ACCOUNT_ID
 touch "$FAKE_WRANGLER_LOG"
 
 # --- fixture deck -----------------------------------------------------------
@@ -85,6 +112,19 @@ SVG
 cd "$deck_dir"
 staging="$work_dir/staging"
 
+# --- ambiguous account selection is refused --------------------------------
+if FAKE_WRANGLER_SECOND_ACCOUNT_ID=22222222222222222222222222222222 \
+  quarto run "$publisher" --no-verify --keep-staging --staging-dir "$work_dir/staging-multi" \
+  >"$work_dir/account-ambiguous.log" 2>&1; then
+  fail "publish guessed between several Cloudflare accounts"
+fi
+grep -q "several Cloudflare accounts are available" "$work_dir/account-ambiguous.log" ||
+  fail "ambiguous account refusal lacked an explanation"
+if grep -q " deploy " "$FAKE_WRANGLER_LOG"; then
+  fail "ambiguous account selection still deployed"
+fi
+: >"$FAKE_WRANGLER_LOG"
+
 # --- first publish ----------------------------------------------------------
 quarto run "$publisher" --no-verify --keep-staging --staging-dir "$staging" ||
   fail "first publish exited non-zero"
@@ -105,11 +145,17 @@ python3 - "$config" <<'PY' || fail "deployed wrangler config is wrong"
 import json, sys
 c = json.load(open(sys.argv[1]))
 assert c["name"] == "altmejd-slides-fixture26"
+assert c["account_id"] == "11111111111111111111111111111111"
 assert c["workers_dev"] is False
 assert c["assets"] == {"directory": "./public"}
 patterns = [r["pattern"] for r in c["routes"]]
 assert patterns == ["slides.example.test/fixture26", "slides.example.test/fixture26/*"], patterns
 assert all(r["zone_name"] == "example.test" for r in c["routes"])
+PY
+python3 - ".altmejd-slides-publish.json" <<'PY' || fail "publish state did not record the account"
+import json, sys
+s = json.load(open(sys.argv[1]))
+assert s["decks"]["fixture26"]["accountId"] == "11111111111111111111111111111111"
 PY
 
 # Publishing this deck must never touch any other worker.
@@ -126,6 +172,18 @@ echo "$out2" | grep -q "skipping deploy" || fail "unchanged republish was not sk
 if grep -q " deploy " "$FAKE_WRANGLER_LOG"; then
   fail "unchanged republish still deployed"
 fi
+
+# An explicit account that conflicts with the recorded owner must fail before
+# any remote lookup or deployment.
+: >"$FAKE_WRANGLER_LOG"
+if CLOUDFLARE_ACCOUNT_ID=22222222222222222222222222222222 \
+  quarto run "$publisher" --no-verify --keep-staging --staging-dir "$work_dir/staging-account" \
+  >"$work_dir/account-mismatch.log" 2>&1; then
+  fail "publish ignored an account mismatch"
+fi
+grep -q "publish record belongs to Cloudflare account" "$work_dir/account-mismatch.log" ||
+  fail "account mismatch lacked an explanation"
+test ! -s "$FAKE_WRANGLER_LOG" || fail "account mismatch contacted Wrangler"
 
 # --- changed host redeploys despite unchanged content -----------------------
 : >"$FAKE_WRANGLER_LOG"
@@ -333,5 +391,145 @@ PY
   >"$work_dir/verify-skip.log" 2>&1 || fail "post-verification republish exited non-zero"
 grep -q "skipping deploy" "$work_dir/verify-skip.log" ||
   fail "verified unchanged republish was not skipped"
+
+# A malformed state file must fail explicitly before any Cloudflare operation.
+malformed_deck="$work_dir/malformed-deck"
+mkdir -p "$malformed_deck"
+printf '{"version":1,"decks":null}\n' >"$malformed_deck/.altmejd-slides-publish.json"
+: >"$FAKE_WRANGLER_LOG"
+if (cd "$malformed_deck" &&
+  quarto run "$publisher" --unpublish --slug malformed --confirm malformed) \
+  >"$work_dir/unpublish-malformed.log" 2>&1; then
+  fail "unpublish accepted a malformed publish state"
+fi
+grep -q "invalid publish state in .altmejd-slides-publish.json" \
+  "$work_dir/unpublish-malformed.log" ||
+  fail "malformed publish state lacked an explicit error"
+test ! -s "$FAKE_WRANGLER_LOG" || fail "malformed publish state contacted Wrangler"
+
+# --- unpublish deletes only a recorded Worker and then updates state --------
+# Unpublishing uses the recorded state and must not need a source deck or render.
+mv "$verify_deck/talk.qmd" "$verify_deck/talk.qmd.archived"
+: >"$FAKE_WRANGLER_LOG"
+# Non-interactive use fails closed unless the exact slug is confirmed.
+if (cd "$verify_deck" && quarto run "$publisher" --unpublish) \
+  >"$work_dir/unpublish-unconfirmed.log" 2>&1; then
+  fail "non-interactive unpublish proceeded without explicit confirmation"
+fi
+grep -q "requires an interactive terminal" "$work_dir/unpublish-unconfirmed.log" ||
+  fail "non-interactive refusal lacked confirmation guidance"
+test ! -s "$FAKE_WRANGLER_LOG" || fail "unconfirmed unpublish contacted Wrangler"
+
+(cd "$verify_deck" && quarto run "$publisher" --unpublish --confirm verify26) \
+  >"$work_dir/unpublish.log" 2>&1 || fail "unpublish exited non-zero"
+grep -q "^wrangler delete --name altmejd-slides-verify26 --config " "$FAKE_WRANGLER_LOG" ||
+  fail "unpublish did not delete exactly the recorded Worker"
+python3 - "$FAKE_WRANGLER_STATE/delete-config-altmejd-slides-verify26.json" <<'PY' || fail "unpublish did not pin the recorded account"
+import json, sys
+c = json.load(open(sys.argv[1]))
+assert c == {
+    "name": "altmejd-slides-verify26",
+    "account_id": "11111111111111111111111111111111",
+}, c
+PY
+test ! -f "$FAKE_WRANGLER_STATE/deployed-altmejd-slides-verify26" ||
+  fail "unpublish left the Worker deployed"
+python3 - "$verify_deck/.altmejd-slides-publish.json" <<'PY' || fail "unpublish did not remove the state entry"
+import json, sys
+s = json.load(open(sys.argv[1]))
+assert s == {"version": 1, "decks": {}}, s
+PY
+
+# A remote Worker without a local ownership record must never be deleted.
+touch "$FAKE_WRANGLER_STATE/deployed-altmejd-slides-unowned"
+: >"$FAKE_WRANGLER_LOG"
+if (cd "$verify_deck" && quarto run "$publisher" --unpublish --slug unowned) \
+  >"$work_dir/unpublish-unowned.log" 2>&1; then
+  fail "unpublish deleted an unowned Worker"
+fi
+grep -q "refusing to delete an unowned Worker" "$work_dir/unpublish-unowned.log" ||
+  fail "unowned Worker refusal lacked an explanation"
+if grep -q " delete " "$FAKE_WRANGLER_LOG"; then
+  fail "unpublish invoked wrangler delete for an unowned Worker"
+fi
+test -f "$FAKE_WRANGLER_STATE/deployed-altmejd-slides-unowned" ||
+  fail "unpublish removed the unowned Worker marker"
+
+# Recreate the owned Worker, then prove failures and declined confirmation keep
+# the state entry. The post-delete existence check catches Wrangler's successful
+# exit when a user declines its confirmation.
+mv "$verify_deck/talk.qmd.archived" "$verify_deck/talk.qmd"
+(cd "$verify_deck" &&
+  quarto run "$publisher" --no-verify --keep-staging --staging-dir "$work_dir/verify-staging4") \
+  >/dev/null 2>&1 || fail "republish after unpublish failed"
+
+# When several records exist, an explicit slug is required before any remote
+# lookup or deletion. Add and then remove a second valid record for this check.
+python3 - "$verify_deck/.altmejd-slides-publish.json" <<'PY'
+import json, sys
+path = sys.argv[1]
+s = json.load(open(path))
+s["decks"]["other-talk"] = {**s["decks"]["verify26"], "worker": "altmejd-slides-other-talk"}
+with open(path, "w") as f:
+    json.dump(s, f, indent=2)
+    f.write("\n")
+PY
+: >"$FAKE_WRANGLER_LOG"
+if (cd "$verify_deck" && quarto run "$publisher" --unpublish) \
+  >"$work_dir/unpublish-ambiguous.log" 2>&1; then
+  fail "unpublish guessed between several state records"
+fi
+grep -q "several published talks are recorded" "$work_dir/unpublish-ambiguous.log" ||
+  fail "ambiguous unpublish refusal lacked an explanation"
+test ! -s "$FAKE_WRANGLER_LOG" || fail "ambiguous unpublish contacted Wrangler"
+python3 - "$verify_deck/.altmejd-slides-publish.json" <<'PY'
+import json, sys
+path = sys.argv[1]
+s = json.load(open(path))
+del s["decks"]["other-talk"]
+with open(path, "w") as f:
+    json.dump(s, f, indent=2)
+    f.write("\n")
+PY
+
+if (cd "$verify_deck" &&
+  FAKE_WRANGLER_DELETE_FAIL=1 quarto run "$publisher" --unpublish --confirm verify26) \
+  >"$work_dir/unpublish-fail.log" 2>&1; then
+  fail "unpublish ignored a Wrangler deletion failure"
+fi
+python3 - "$verify_deck/.altmejd-slides-publish.json" <<'PY' || fail "delete failure dropped the state entry"
+import json, sys
+s = json.load(open(sys.argv[1]))
+assert "verify26" in s["decks"], s
+PY
+
+if (cd "$verify_deck" &&
+  FAKE_WRANGLER_DELETE_KEEP=1 quarto run "$publisher" --unpublish --confirm verify26) \
+  >"$work_dir/unpublish-declined.log" 2>&1; then
+  fail "unpublish accepted a deletion that left the Worker live"
+fi
+grep -q "still exists; local record kept" "$work_dir/unpublish-declined.log" ||
+  fail "declined deletion did not explain that state was preserved"
+python3 - "$verify_deck/.altmejd-slides-publish.json" <<'PY' || fail "declined deletion dropped the state entry"
+import json, sys
+s = json.load(open(sys.argv[1]))
+assert "verify26" in s["decks"], s
+PY
+
+# Reconcile state when the owned Worker was already deleted elsewhere.
+rm -f "$FAKE_WRANGLER_STATE/deployed-altmejd-slides-verify26"
+: >"$FAKE_WRANGLER_LOG"
+(cd "$verify_deck" && quarto run "$publisher" --unpublish --confirm verify26) \
+  >"$work_dir/unpublish-stale.log" 2>&1 || fail "stale-state cleanup failed"
+grep -q "already absent; removing its stale local record" "$work_dir/unpublish-stale.log" ||
+  fail "stale-state cleanup was not reported"
+if grep -q " delete " "$FAKE_WRANGLER_LOG"; then
+  fail "stale-state cleanup invoked an unnecessary delete"
+fi
+python3 - "$verify_deck/.altmejd-slides-publish.json" <<'PY' || fail "stale-state cleanup kept the record"
+import json, sys
+s = json.load(open(sys.argv[1]))
+assert s == {"version": 1, "decks": {}}, s
+PY
 
 echo "publish integration: all checks passed"

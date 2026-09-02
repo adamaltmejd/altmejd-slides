@@ -70,14 +70,17 @@ project with several QMD files must pick the deck with
 ## Authentication
 
 - **Locally**: `wrangler login` once; the publisher uses the stored OAuth
-  session.
+  session. If that login can access several accounts, set
+  `CLOUDFLARE_ACCOUNT_ID` explicitly so the first publish cannot select the
+  wrong one.
 - **CI**: set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. A
   least-privilege token needs Account · Workers Scripts · Edit and Zone ·
   Workers Routes · Edit (plus Zone · DNS · Edit for the one-time gateway
   bootstrap).
 
 Tokens are read by wrangler itself; the publisher never stores or prints
-them.
+them. The non-secret account ID is stored with each publish record and pinned
+in every later publish or unpublish command.
 
 Wrangler 4 is the supported major. The publisher uses, in order: the
 `ALTMEJD_SLIDES_WRANGLER` environment override, a `wrangler` already on
@@ -118,9 +121,9 @@ records the deployment as `verification: pending`. Rerunning `make publish`
 later retries only the verification — it does not redeploy unchanged content
 and does not require `--adopt` for the Worker this project just created.
 
-Publishing records the deployed slug, host, zone, and content hash in
-`.altmejd-slides-publish.json` next to the deck; commit it so the unchanged
-check and collision protection follow the repository.
+Publishing records the deployed slug, host, zone, Cloudflare account ID, and
+content hash in `.altmejd-slides-publish.json` next to the deck; commit it so
+the unchanged check and collision protection follow the repository.
 
 ## Publishing PDFs and other artifacts
 
@@ -179,14 +182,59 @@ Each talk keeps Cloudflare's version history:
 npx wrangler@4 rollback --name altmejd-slides-<slug>
 ```
 
-## Deleting a published talk
+## Unpublishing a talk
 
 ```sh
-npx wrangler@4 delete --name altmejd-slides-<slug>
+make unpublish
 ```
 
-This removes the Worker and its routes; the gateway then answers 404 for the
-path. Remove the entry from `.altmejd-slides-publish.json` afterwards.
+The publisher selects the sole talk recorded in
+`.altmejd-slides-publish.json`, requires you to type its exact slug, and pins
+Wrangler to the Cloudflare account saved during publishing. Wrangler then asks
+for its own deletion confirmation. Only that recorded Worker and its routes are
+deleted; the publisher verifies that it is gone before removing its state
+entry. It does not render or stage the deck and never touches the shared
+gateway. The gateway then answers 404 for the path.
+
+If the state file contains several talks, choose one explicitly:
+
+```sh
+make unpublish PUBLISH_ARGS="--slug ucls26"
+```
+
+Non-interactive use fails closed. To authorize it deliberately, repeat the
+exact slug as the confirmation value:
+
+```sh
+make unpublish PUBLISH_ARGS="--slug ucls26 --confirm ucls26"
+```
+
+Unpublishing fails closed when the slug is not recorded or the recorded Worker
+name does not match the extension's deterministic name. If the Worker was
+already removed outside this workflow, the command cleans up its stale state
+entry. A failed or declined Wrangler deletion keeps the state entry so it can
+be retried safely.
+
+Publish records created before account binding was added need one explicit
+account selection before they can be deleted:
+
+```sh
+CLOUDFLARE_ACCOUNT_ID=<account-id> make unpublish
+```
+
+If that account does not contain the recorded Worker, the legacy state is kept
+rather than guessing another account.
+
+`quarto update` refreshes the publisher inside `_extensions/` but cannot edit an
+existing deck's root `Makefile`. For a deck created before this target existed,
+copy the `unpublish` target from the current template or run the publisher
+directly with `--unpublish`. If the local state record has been lost, the
+workflow will not guess ownership; inspect the Worker manually before using
+Wrangler's lower-level `delete --name` command.
+
+Deleting the Worker cannot retract copies already downloaded, cached, or
+archived elsewhere. Republish later with `make publish`; it creates a fresh
+Worker and state entry for the same slug.
 
 ## Limits
 

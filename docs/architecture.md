@@ -157,12 +157,15 @@ second site framework or a checked-in build directory.
 Publishing is an explicit external action, never a render side effect. The
 publisher lives at `_extensions/altmejd-slides/tools/publish-cloudflare.ts`
 so it ships with `quarto add`, and runs on Quarto's bundled Deno via
-`quarto run`; the starter-template `Makefile` provides the `make publish`
-wrapper because `quarto add` copies only the extension directory. Each deck
-deploys as an independent Static Assets Worker (`altmejd-slides-<slug>`) on
-zone routes beneath a gateway Custom Domain, so one talk's republish cannot
-replace another's assets. Pure decisions (slug and target resolution, HTML
-asset scanning, staging plans, wrangler configs) sit in
+`quarto run`; the starter-template `Makefile` provides the `make publish` and
+`make unpublish` wrappers because `quarto add` copies only the extension
+directory. Each deck deploys as an independent Static Assets Worker
+(`altmejd-slides-<slug>`) on zone routes beneath a gateway Custom Domain, so
+one talk's republish cannot replace another's assets. Unpublishing uses the
+account-bound local publish record as its ownership boundary, requires exact
+slug confirmation, and refuses to delete an unrecorded or mismatched Worker.
+Pure decisions (slug and target resolution, HTML asset scanning, staging plans,
+wrangler configs) sit in
 `tools/publish/core.ts` with no Deno APIs, tested by `bun test`; the effects
 are exercised end-to-end against a mocked wrangler by
 `tools/test_publish_integration.sh`, and `tools/check_published_prefix.mjs`
