@@ -24,6 +24,7 @@ import {
   resolveArtifacts,
   resolveInput,
   resolveTarget,
+  validateSlug,
   workerName,
 } from "./publish/core.ts";
 
@@ -31,6 +32,7 @@ const STATE_FILE = ".altmejd-slides-publish.json";
 
 interface Options {
   bootstrapGateway: boolean;
+  unpublish: boolean;
   input?: string;
   slug?: string;
   host?: string;
@@ -50,6 +52,7 @@ function usage(): string {
     "  --input <deck.qmd>    deck source (required when several QMDs exist)",
     "  --slug <slug>         override the public path segment",
     "  --bootstrap-gateway   deploy the shared gateway Worker for the host",
+    "  --unpublish           delete a talk Worker recorded by this project",
     "  --host <host>         override or supply the publish host",
     "  --zone <zone>         Cloudflare zone (default: host minus first label)",
     "  --stage-only          render, stage, and validate without deploying",
@@ -64,6 +67,7 @@ function usage(): string {
 function parseArgs(args: string[]): Options {
   const opts: Options = {
     bootstrapGateway: false,
+    unpublish: false,
     stageOnly: false,
     keepStaging: false,
     noVerify: false,
@@ -82,6 +86,9 @@ function parseArgs(args: string[]): Options {
     switch (arg) {
       case "--bootstrap-gateway":
         opts.bootstrapGateway = true;
+        break;
+      case "--unpublish":
+        opts.unpublish = true;
         break;
       case "--input":
         opts.input = value();
@@ -122,6 +129,9 @@ function parseArgs(args: string[]): Options {
         fail(`unknown option ${arg}\n\n${usage()}`);
     }
   }
+  if (opts.bootstrapGateway && opts.unpublish) {
+    fail("--bootstrap-gateway and --unpublish cannot be used together");
+  }
   return opts;
 }
 
@@ -132,11 +142,12 @@ function fail(message: string): never {
 
 async function run(
   cmd: string[],
-  opts: { capture?: boolean; cwd?: string } = {},
+  opts: { capture?: boolean; cwd?: string; stdin?: "inherit" } = {},
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   const command = new Deno.Command(cmd[0], {
     args: cmd.slice(1),
     cwd: opts.cwd,
+    stdin: opts.stdin ?? "null",
     stdout: opts.capture ? "piped" : "inherit",
     stderr: opts.capture ? "piped" : "inherit",
   });
@@ -606,6 +617,82 @@ async function deployDeck(opts: Options, target: CloudflareTarget, stagingDir: s
   console.log(`\npublished at: ${publicUrl(target)}`);
 }
 
+async function unpublish(opts: Options): Promise<void> {
+  const incompatible = [
+    opts.input !== undefined ? "--input" : undefined,
+    opts.host !== undefined ? "--host" : undefined,
+    opts.zone !== undefined ? "--zone" : undefined,
+    opts.stageOnly ? "--stage-only" : undefined,
+    opts.stagingDir !== undefined ? "--staging-dir" : undefined,
+    opts.keepStaging ? "--keep-staging" : undefined,
+    opts.noVerify ? "--no-verify" : undefined,
+    opts.force ? "--force" : undefined,
+    opts.adopt ? "--adopt" : undefined,
+  ].filter((flag): flag is string => flag !== undefined);
+  if (incompatible.length > 0) {
+    fail(`--unpublish accepts only --slug; remove ${incompatible.join(", ")}`);
+  }
+
+  const state = await readState();
+  const recordedSlugs = Object.keys(state.decks).sort();
+  let slug: string;
+  if (opts.slug !== undefined) {
+    const slugError = validateSlug(opts.slug);
+    if (slugError !== null) {
+      fail(slugError);
+    }
+    slug = opts.slug;
+  } else {
+    if (recordedSlugs.length === 0) {
+      fail(`no published talks are recorded in ${STATE_FILE}`);
+    }
+    if (recordedSlugs.length > 1) {
+      fail(
+        `several published talks are recorded (${recordedSlugs.join(", ")}); ` +
+          "pass --slug to choose one",
+      );
+    }
+    slug = recordedSlugs[0];
+  }
+
+  const known = state.decks[slug];
+  if (known === undefined) {
+    fail(
+      `no published talk with slug "${slug}" is recorded in ${STATE_FILE}; ` +
+        "refusing to delete an unowned Worker",
+    );
+  }
+  const expectedWorker = workerName(slug);
+  if (known.worker !== expectedWorker || typeof known.host !== "string") {
+    fail(
+      `invalid publish record for slug "${slug}"; expected Worker ` +
+        `"${expectedWorker}"; refusing to delete it`,
+    );
+  }
+
+  const wrangler = await resolveWrangler();
+  if (await workerExists(wrangler, expectedWorker)) {
+    console.log(`unpublishing https://${known.host}/${slug}/ (Worker "${expectedWorker}")`);
+    const deletion = await run([...wrangler, "delete", "--name", expectedWorker], {
+      stdin: "inherit",
+    });
+    if (deletion.code !== 0) {
+      fail(`wrangler delete failed with exit code ${deletion.code}; local record kept`);
+    }
+    // Wrangler exits successfully when its confirmation is declined. Confirm
+    // the Worker is gone before dropping the ownership record.
+    if (await workerExists(wrangler, expectedWorker)) {
+      fail(`Worker "${expectedWorker}" still exists; local record kept`);
+    }
+  } else {
+    console.log(`Worker "${expectedWorker}" is already absent; removing its stale local record`);
+  }
+
+  delete state.decks[slug];
+  await writeState(state);
+  console.log(`unpublished: https://${known.host}/${slug}/`);
+}
+
 async function bootstrapGateway(opts: Options): Promise<void> {
   let host = opts.host;
   let zone = opts.zone;
@@ -745,6 +832,8 @@ async function publish(opts: Options): Promise<void> {
 const opts = parseArgs(Deno.args);
 if (opts.bootstrapGateway) {
   await bootstrapGateway(opts);
+} else if (opts.unpublish) {
+  await unpublish(opts);
 } else {
   await publish(opts);
 }

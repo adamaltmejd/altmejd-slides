@@ -50,8 +50,9 @@ make publish
 
 Each talk becomes its own Cloudflare Static Assets Worker behind a shared
 gateway domain, so republishing one talk never touches another, and rendering
-or previewing never deploys anything. Setup, authentication, rollback, and
-deletion are documented in [docs/publishing.md](docs/publishing.md).
+or previewing never deploys anything. After the talk, remove its Worker and
+routes with `make unpublish`. Setup, authentication, rollback, and the guarded
+unpublish workflow are documented in [docs/publishing.md](docs/publishing.md).
 
 ## Configure it
 

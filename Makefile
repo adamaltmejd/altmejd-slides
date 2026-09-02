@@ -7,10 +7,11 @@ PUBLISH_SCRIPT := $(firstword \
 	$(wildcard _extensions/*/altmejd-slides/tools/publish-cloudflare.ts) \
 	$(wildcard _extensions/altmejd-slides/tools/publish-cloudflare.ts))
 
-# Extra flags for the publisher, e.g. make publish PUBLISH_ARGS="--slug ucls26"
+# Extra flags, e.g. make publish PUBLISH_ARGS="--slug ucls26" or the same for
+# make unpublish when a state file records several talks.
 PUBLISH_ARGS ?=
 
-.PHONY: render preview publish bootstrap-gateway
+.PHONY: render preview publish unpublish bootstrap-gateway
 
 render:
 	quarto render
@@ -22,6 +23,11 @@ publish:
 	@test -n "$(PUBLISH_SCRIPT)" || { \
 		echo "altmejd-slides extension not found under _extensions/"; exit 1; }
 	quarto run "$(PUBLISH_SCRIPT)" $(PUBLISH_ARGS)
+
+unpublish:
+	@test -n "$(PUBLISH_SCRIPT)" || { \
+		echo "altmejd-slides extension not found under _extensions/"; exit 1; }
+	quarto run "$(PUBLISH_SCRIPT)" --unpublish $(PUBLISH_ARGS)
 
 bootstrap-gateway:
 	@test -n "$(PUBLISH_SCRIPT)" || { \

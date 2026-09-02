@@ -179,14 +179,40 @@ Each talk keeps Cloudflare's version history:
 npx wrangler@4 rollback --name altmejd-slides-<slug>
 ```
 
-## Deleting a published talk
+## Unpublishing a talk
 
 ```sh
-npx wrangler@4 delete --name altmejd-slides-<slug>
+make unpublish
 ```
 
-This removes the Worker and its routes; the gateway then answers 404 for the
-path. Remove the entry from `.altmejd-slides-publish.json` afterwards.
+The publisher selects the sole talk recorded in
+`.altmejd-slides-publish.json`, asks Wrangler for confirmation, deletes only
+that recorded Worker and its routes, verifies that it is gone, and then removes
+its state entry. It does not render or stage the deck and never touches the
+shared gateway. The gateway then answers 404 for the path.
+
+If the state file contains several talks, choose one explicitly:
+
+```sh
+make unpublish PUBLISH_ARGS="--slug ucls26"
+```
+
+Unpublishing fails closed when the slug is not recorded or the recorded Worker
+name does not match the extension's deterministic name. If the Worker was
+already removed outside this workflow, the command cleans up its stale state
+entry. A failed or declined Wrangler deletion keeps the state entry so it can
+be retried safely.
+
+`quarto update` refreshes the publisher inside `_extensions/` but cannot edit an
+existing deck's root `Makefile`. For a deck created before this target existed,
+copy the `unpublish` target from the current template or run the publisher
+directly with `--unpublish`. If the local state record has been lost, the
+workflow will not guess ownership; inspect the Worker manually before using
+Wrangler's lower-level `delete --name` command.
+
+Deleting the Worker cannot retract copies already downloaded, cached, or
+archived elsewhere. Republish later with `make publish`; it creates a fresh
+Worker and state entry for the same slug.
 
 ## Limits
 

@@ -33,7 +33,8 @@ altmejd-slides:
     heading: false
     bullets: none
     clickable: false
-  # Explicit Cloudflare publishing via `make publish`; rendering never deploys.
+  # Explicit Cloudflare publishing via `make publish`; remove it with
+  # `make unpublish`. Rendering never deploys.
   # Defaults: host slides.altmejd.se, slug from the deck repository's name.
   # publish:
   #   cloudflare:
