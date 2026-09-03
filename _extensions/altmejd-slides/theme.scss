@@ -766,10 +766,6 @@ $code-bg: $altmejd-code-bg !default;
   background: var(--altmejd-agenda-background);
 }
 
-.reveal:not(.overview) .slides section.closing-slide {
-  box-shadow: 0 0 0 100vmax var(--altmejd-agenda-background);
-}
-
 .reveal .slides section.closing-slide::before {
   content: "";
   position: absolute;
@@ -915,8 +911,12 @@ $code-bg: $altmejd-code-bg !default;
   background: var(--altmejd-agenda-background);
 }
 
-.reveal:not(.overview) .slides section.agenda-slide {
-  box-shadow: 0 0 0 100vmax var(--altmejd-agenda-background);
+.reveal:not(.overview):has(
+  .slides section:is(.agenda-slide, .closing-slide).present
+) {
+  // Paint the divider surface on the unscaled root. An oversized same-color
+  // shadow leaves a fractional-pixel seam around the slide in Gecko.
+  background: var(--altmejd-agenda-background);
 }
 
 // The footer belongs to content slides, not the cover, section dividers,
