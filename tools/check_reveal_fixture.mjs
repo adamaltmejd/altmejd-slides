@@ -147,6 +147,11 @@ try {
     const agendaIsPlain =
       agendaHeading === null && agendaList.querySelector(":scope > ul, :scope > ol") === null;
     const agendaFooterHidden = getComputedStyle(footer).display === "none";
+    const agendaStyle = getComputedStyle(agenda);
+    const agendaBackground = agendaStyle.backgroundColor;
+    const agendaSurface =
+      agendaStyle.boxShadow === "none" &&
+      getComputedStyle(document.querySelector(".reveal")).backgroundColor === agendaBackground;
     const agendaItems = Array.from(agendaList.children);
     const agendaItemStyles = agendaItems.map((item) => getComputedStyle(item));
     const agendaTypography =
@@ -155,6 +160,8 @@ try {
       Number.parseFloat(getComputedStyle(agendaList).rowGap) > 5;
 
     const directJumpSlide = await show("notes-and-aside");
+    const contentSurfaceCleared =
+      getComputedStyle(document.querySelector(".reveal")).backgroundColor !== agendaBackground;
     const contentHeading = directJumpSlide.querySelector(":scope > h2");
     const contentRuleTop =
       rect(contentHeading).bottom -
@@ -236,7 +243,9 @@ try {
       agendaFooterHidden,
       agendaIsPlain,
       agendaOrder,
+      agendaSurface,
       agendaTypography,
+      contentSurfaceCleared,
       directJumpMediaVisible:
         directJumpImage.naturalWidth > 0 &&
         directJumpImageRect.width > 100 &&
@@ -390,7 +399,9 @@ try {
     !layout.agendaIsPlain ||
     !layout.agendaOrder ||
     !layout.agendaFooterHidden ||
-    !layout.agendaTypography
+    !layout.agendaSurface ||
+    !layout.agendaTypography ||
+    !layout.contentSurfaceCleared
   ) {
     throw new Error(`default agenda layout failed: ${JSON.stringify(layout)}`);
   }
@@ -627,6 +638,10 @@ try {
       contactRuled: Number.parseFloat(getComputedStyle(closingContact).borderTopWidth) === 1,
       fits: closing.scrollHeight <= closing.clientHeight + 2,
       footerHidden: getComputedStyle(footer).display === "none",
+      surface:
+        getComputedStyle(closing).boxShadow === "none" &&
+        getComputedStyle(document.querySelector(".reveal")).backgroundColor ===
+          getComputedStyle(closing).backgroundColor,
       qrDocked:
         getComputedStyle(closingQr).position === "absolute" &&
         Math.abs(rect(closingQr).right - rect(closing).right) < 2,
@@ -704,6 +719,7 @@ try {
     !primitives.closing.contactRuled ||
     !primitives.closing.fits ||
     !primitives.closing.footerHidden ||
+    !primitives.closing.surface ||
     !primitives.closing.qrDocked ||
     !primitives.closing.qrGenerated ||
     primitives.closing.ruleHeight !== 4 ||
