@@ -28,7 +28,7 @@ quarto update adamaltmejd/altmejd-slides
 Pin a deck to a released extension when reproducibility matters:
 
 ```sh
-quarto add adamaltmejd/altmejd-slides@v0.7.1
+quarto add adamaltmejd/altmejd-slides@v0.7.2
 ```
 
 The complete copyable front matter lives in [`template.qmd`](template.qmd).
@@ -96,13 +96,23 @@ transition, and slide numbers—under the format rather than duplicating them in
 
 ## Research-slide primitives
 
-Ordinary two-column slides are automatically upgraded to fill-height figure
-panels when both columns contain an image. A short panel label, the image, and
-an optional internal-link row are enough:
-
 Standalone figures are centered by default. Use `fig-align="left"` or
 `fig-align="right"` on an individual image when its alignment should differ;
 `.r-stretch` controls sizing independently and is not needed for centering.
+
+Standard Markdown figure captions are supported without a panel wrapper:
+
+```markdown
+![Example applicant with score = 8](applicant.svg){fig-alt="Description of the diagram"}
+```
+
+Captions sit below the image in smaller, muted text and are centered by default.
+An explicit `fig-align="left"` or `fig-align="right"` also aligns the caption.
+Use `fig-alt` for an accessibility description separate from the visible caption.
+
+Ordinary two-column slides are automatically upgraded to fill-height figure
+panels when both columns contain an image. A short panel label, the image, and
+an optional internal-link row are enough:
 
 ```markdown
 :::: {.columns}
