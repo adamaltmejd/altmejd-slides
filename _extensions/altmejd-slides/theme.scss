@@ -467,6 +467,28 @@ $code-bg: $altmejd-code-bg !default;
   text-align: center;
 }
 
+// Quarto emits a sibling `p.caption` for auto-stretched images and a
+// `figcaption` for figures that keep their wrapper. Give both the same style.
+.reveal .slide figure > figcaption,
+.reveal .slide img:is(.stretch, .r-stretch) + p.caption,
+.reveal .slide p.caption {
+  margin: 0.4em 0 0;
+  color: var(--altmejd-muted);
+  font-size: 0.65em;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.reveal .slide .quarto-figure-left figcaption,
+.reveal .slide > img.quarto-figure-left + p.caption {
+  text-align: left;
+}
+
+.reveal .slide .quarto-figure-right figcaption,
+.reveal .slide > img.quarto-figure-right + p.caption {
+  text-align: right;
+}
+
 .reveal .progress {
   height: 3px;
   background: color-mix(in srgb, var(--altmejd-border) 35%, transparent);

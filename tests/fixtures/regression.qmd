@@ -259,6 +259,21 @@ A captioned figure keeps Quarto's `<figure>` wrapper, so it fills the slide by
 layout instead of by the stretch class.
 :::
 
+## Caption below a stretched figure {#captioned-figure-auto-stretch}
+
+- The caption stays below the figure after the bullet list.
+- Footer navigation leaves room for a wrapping caption.
+
+![A deliberately long caption that wraps onto a second line: the synthetic point estimate and confidence interval illustrate how ordinary Markdown figure captions keep their own space below the image while remaining clear of footer navigation.](../../examples/assets/estimate.svg){fig-alt="A synthetic estimate with a wrapping caption and footer navigation"}
+
+[Figure with an aside](#captioned-figure-stretch)
+
+## Caption below a fixed-size figure {#captioned-figure-nostretch}
+
+![A fixed-size figure keeps its explicit right caption alignment](../../examples/assets/estimate.svg){.nostretch width="1000" fig-align="right" fig-alt="A fixed-size synthetic estimate with a native figure caption"}
+
+[Stretched figure](#captioned-figure-auto-stretch)
+
 ## Linked figure is not navigation {#linked-figure}
 
 [![](../../examples/assets/estimate.svg){fig-alt="A figure wrapped in an internal link"}](#implicit-figure-stretch)

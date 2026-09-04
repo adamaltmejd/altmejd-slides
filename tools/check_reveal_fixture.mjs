@@ -467,6 +467,14 @@ try {
         rect(element).left + rect(element).width / 2 - (rect(slide).left + rect(slide).width / 2),
       ) < 2;
     const asideOf = (slide) => slide.querySelector(":scope > .aside, :scope > aside:not(.notes)");
+    const captionStyled = (caption, alignment = "center") => {
+      const style = getComputedStyle(caption);
+      return (
+        style.textAlign === alignment &&
+        Number.parseFloat(style.fontSize) === 26 &&
+        style.color === "rgb(91, 106, 128)"
+      );
+    };
 
     // Quarto drops auto-stretch on any slide holding an aside, so an untagged
     // lone figure must still be stretched and centered by the format itself.
@@ -492,7 +500,57 @@ try {
       rect(captionedFigure).right <= rect(captionedSlide).right + 2 &&
       centered(captionedFigure, captionedSlide) &&
       rect(captionedFigure).bottom <= rect(caption).top + 1 &&
-      rect(caption).bottom <= rect(asideOf(captionedSlide)).top + 1;
+      rect(caption).bottom <= rect(asideOf(captionedSlide)).top + 1 &&
+      captionStyled(caption) &&
+      captionedFigure.alt === "A captioned figure that must fit above the aside";
+
+    // Quarto emits a direct caption paragraph when it unwraps an image for
+    // auto-stretch, but keeps figcaption for .nostretch. Both share the style
+    // and reserve enough room for the full caption above footer navigation.
+    const captions = [];
+    for (const [id, captionSelector, expectedAlt, alignment, wraps] of [
+      [
+        "captioned-figure-auto-stretch",
+        ":scope > p.caption",
+        "A synthetic estimate with a wrapping caption and footer navigation",
+        "center",
+        true,
+      ],
+      [
+        "captioned-figure-nostretch",
+        "figcaption",
+        "A fixed-size synthetic estimate with a native figure caption",
+        "right",
+        false,
+      ],
+    ]) {
+      const slide = await show(id);
+      const image = slide.querySelector("img");
+      const figureCaption = slide.querySelector(captionSelector);
+      const navigation = slide.querySelector(":scope > .slide-nav");
+      const slideRect = rect(slide);
+      const imageRect = rect(image);
+      const captionRect = rect(figureCaption);
+      const scale = slideRect.width / slide.offsetWidth;
+      captions.push({
+        id,
+        styled: captionStyled(figureCaption, alignment),
+        fits:
+          imageRect.width > 100 &&
+          imageRect.height > 100 &&
+          imageRect.bottom <= captionRect.top + 1 &&
+          captionRect.bottom <= rect(navigation).top + 1 &&
+          captionRect.left >= slideRect.left - 1 &&
+          captionRect.right <= slideRect.right + 1 &&
+          rect(navigation).bottom <= slideRect.bottom + 1 &&
+          slide.scrollHeight <= slide.clientHeight + 2,
+        wraps:
+          !wraps ||
+          captionRect.height >
+            Number.parseFloat(getComputedStyle(figureCaption).lineHeight) * scale * 1.5,
+        altPreserved: image.alt === expectedAlt,
+      });
+    }
 
     // A lone figure wrapped in an internal link is a clickable figure, not a
     // navigation row, so it must stay in flow at full size.
@@ -505,10 +563,17 @@ try {
       centered(linkedFigure, linkedSlide) &&
       rect(linkedFigure).bottom <= rect(asideOf(linkedSlide)).top + 1;
 
-    return { implicitStretched, captionedFits, linkedInFlow };
+    return { implicitStretched, captionedFits, captions, linkedInFlow };
   });
   console.log(JSON.stringify({ figures }));
-  if (!figures.implicitStretched || !figures.captionedFits || !figures.linkedInFlow) {
+  if (
+    !figures.implicitStretched ||
+    !figures.captionedFits ||
+    !figures.linkedInFlow ||
+    figures.captions.some(
+      (caption) => !caption.styled || !caption.fits || !caption.wraps || !caption.altPreserved,
+    )
+  ) {
     throw new Error(`standalone figure layout failed: ${JSON.stringify(figures)}`);
   }
 
