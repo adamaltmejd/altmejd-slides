@@ -13,38 +13,10 @@ format:
     width: 1600
     height: 900
 
-# These are the built-in defaults, written out so a new deck has one obvious
-# place to edit its palette and section agendas.
-altmejd-slides:
-  math: true
-  colors:
-    background: "#f8fafc"
-    foreground: "#0f172a"
-    primary: "#644043"
-    secondary: "#ffeac2"
-    accent: "#e26d5c"
-    info: "#924f5b"
-    success: "#c9cba3"
-    surface: "#f1f5f9"
-    border: "#e2e8f0"
-    muted: "#5b6a80"
-  agenda:
-    enabled: true
-    heading: false
-    bullets: none
-    clickable: false
-  # Explicit Cloudflare publishing via `make publish`; remove it with
-  # `make unpublish`. Rendering never deploys.
-  # Defaults: host slides.altmejd.se, slug from the deck repository's name.
-  # publish:
-  #   cloudflare:
-  #     host: slides.altmejd.se
-  #     slug: my-talk
-
-slide-remote:
-  worker-url: https://slide-remote.adamaltmejd.workers.dev
-  show-button: false
-  disable-on-params: [pdf, handout]
+# The default palette, section agendas, and bundled math need no configuration.
+# Recipes: https://github.com/adamaltmejd/altmejd-slides/blob/main/docs/authoring.md
+# Palette: https://github.com/adamaltmejd/altmejd-slides/blob/main/docs/design.md
+# Optional remote control and publishing are covered in the authoring guide.
 ---
 
 ## Opening question
@@ -52,8 +24,7 @@ slide-remote:
 What should the audience understand when the talk is over?
 
 ::: notes
-Speaker notes remain available to Reveal speaker view, Slide Remote, and the
-handout PDF.
+Write the speaking cue here. Notes also appear in the handout PDF.
 :::
 
 # Evidence

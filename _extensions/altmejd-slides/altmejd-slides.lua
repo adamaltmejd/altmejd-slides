@@ -12,6 +12,8 @@ local agenda = {
   bullets = "none",
   heading = nil,
   clickable = false,
+  include_appendix = false,
+  in_appendix = false,
   sections = pandoc.List(),
 }
 
@@ -160,6 +162,7 @@ local function read_agenda(options)
   agenda.bullets = "none"
   agenda.heading = nil
   agenda.clickable = false
+  agenda.include_appendix = false
 
   if options == nil or options == true then
     return
@@ -191,10 +194,12 @@ local function read_agenda(options)
   end
 
   agenda.clickable = as_boolean(options.clickable, false)
+  agenda.include_appendix = as_boolean(options["include-appendix"], false)
 end
 
 local function read_metadata(meta)
   agenda.sections = pandoc.List()
+  agenda.in_appendix = false
   local options = meta["altmejd-slides"]
   bundled_math = true
   auto_stretch = as_boolean(meta["auto-stretch"], true)
@@ -206,16 +211,32 @@ local function read_metadata(meta)
     bundled_math = as_boolean(options.math, true)
   end
 
+  local remote = meta["slide-remote"]
+  if type(remote) == "table" then
+    local disabled = remote["disable-on-params"] or pandoc.List()
+    for _, parameter in ipairs({ "reading", "check" }) do
+      local present = false
+      for _, value in ipairs(disabled) do
+        present = present or stringify(value) == parameter
+      end
+      if not present then
+        table.insert(disabled, pandoc.MetaString(parameter))
+      end
+    end
+    remote["disable-on-params"] = disabled
+  end
+
   quarto.doc.add_html_dependency({
     name = "altmejd-slides-runtime",
-    version = "0.7.2",
-    scripts = { "resources/runtime.js" },
+    version = "0.7.3",
+    scripts = { "resources/runtime.js", "resources/reader.js", "resources/preflight.js" },
+    stylesheets = { "resources/reader.css" },
   })
   -- Bundled OFL typefaces, vendored like KaTeX so rendering and PDF capture
   -- never depend on host-installed fonts.
   quarto.doc.add_html_dependency({
     name = "altmejd-slides-fonts",
-    version = "0.7.2",
+    version = "0.7.3",
     stylesheets = { "resources/fonts/fonts.css" },
   })
   if bundled_math then
@@ -227,7 +248,7 @@ local function read_metadata(meta)
     })
     quarto.doc.add_html_dependency({
       name = "altmejd-slides-math",
-      version = "0.7.2",
+      version = "0.7.3",
       scripts = { "resources/math.js" },
     })
   end
@@ -329,14 +350,22 @@ local function render_qr_link(link)
   if alt == "" then
     alt = "QR code linking to " .. link.target
   end
-  return pandoc.RawInline(
-    "html",
-    string.format(
-      '<img class="qr nostretch" alt="%s" src="data:image/svg+xml;base64,%s" />',
-      escape_html(alt):gsub('"', "&quot;"),
-      quarto.base64.encode(qr_svg(matrix_or_message))
-    )
-  )
+  link.classes = link.classes:filter(function(class) return class ~= "qr" end)
+  link.classes:insert("qr-link")
+  link.content = {
+    pandoc.Image(
+      { pandoc.Str(alt) },
+      "data:image/svg+xml;base64," .. quarto.base64.encode(qr_svg(matrix_or_message)),
+      "",
+      pandoc.Attr("", { "qr", "nostretch" })
+    ),
+  }
+  return link
+end
+
+local function is_appendix_start(header)
+  return header.level == 1
+    and (header.classes:includes("appendix") or header.identifier == "appendix")
 end
 
 local function is_agenda_section(header)
@@ -345,7 +374,12 @@ local function is_agenda_section(header)
 end
 
 local function collect_sections(header)
-  if agenda.enabled and is_agenda_section(header) then
+  if is_appendix_start(header) then
+    agenda.in_appendix = true
+  end
+  if agenda.enabled and is_agenda_section(header)
+    and (agenda.include_appendix or not agenda.in_appendix)
+  then
     agenda.sections:insert({
       content = header.content,
       identifier = header.identifier or "",
@@ -356,17 +390,19 @@ end
 local function agenda_item(section, active)
   local classes = active and { "agenda-active" } or { "agenda-inactive" }
   local content = section.content
+  local attributes = active and { ["aria-current"] = "location" } or {}
 
   if agenda.clickable and section.identifier ~= "" then
     content = {
-      pandoc.Link(section.content, "#" .. section.identifier),
+      pandoc.Link(section.content, "#" .. section.identifier, "", pandoc.Attr("", {}, attributes)),
     }
+    attributes = {}
   end
 
   return {
     pandoc.Div(
       { pandoc.Plain(content) },
-      pandoc.Attr("", classes)
+      pandoc.Attr("", classes, attributes)
     ),
   }
 end
@@ -413,6 +449,9 @@ local function is_figure_panels(div)
   end
 
   local explicit = div.classes:includes("figure-panels")
+  if div.classes:includes("no-figure-panels") then
+    return false
+  end
   if not explicit and not div.classes:includes("columns") then
     return false
   end
@@ -554,11 +593,26 @@ local function has_direct_aside(blocks)
 end
 
 local function stretch_lone_figure(header, blocks)
-  if not has_direct_aside(blocks) or count_images(blocks) ~= 1 then
+  if header.classes:includes("nostretch")
+    or not has_direct_aside(blocks) or count_images(blocks) ~= 1
+  then
     return blocks
   end
 
   for index, block in ipairs(blocks) do
+    local fixed_image = false
+    pandoc.walk_block(block, {
+      Image = function(image)
+        fixed_image = image.classes:includes("nostretch")
+          or image.classes:includes("absolute")
+          or image.attributes.height ~= nil
+          or (image.attributes.style or ""):lower():match("height%s*:") ~= nil
+        return image
+      end,
+    })
+    if fixed_image then
+      return blocks
+    end
     if is_lone_image_block(block) then
       blocks[index] = pandoc.walk_block(block, {
         Image = function(image)
@@ -624,11 +678,13 @@ end
 local function enrich_research_layouts(blocks)
   local output = pandoc.List()
   local current_slide = nil
+  local navigation = nil
 
   for _, block in ipairs(blocks) do
     block = label_back_controls(block)
     if block.t == "Header" and block.level <= 2 then
       current_slide = block.level == 2 and block or nil
+      navigation = nil
     elseif block.t == "Div"
       and block.classes:includes("table-note")
       and #output > 0
@@ -645,10 +701,26 @@ local function enrich_research_layouts(blocks)
       if not current_slide.classes:includes("layout-fill") then
         current_slide.classes:insert("layout-fill")
       end
-    elseif current_slide ~= nil and is_navigation_paragraph(block) then
-      block = pandoc.Div({ block }, pandoc.Attr("", { "slide-nav" }))
+    elseif current_slide ~= nil
+      and (is_navigation_paragraph(block)
+        or (block.t == "Div" and block.classes:includes("slide-nav")))
+    then
+      -- Keep one dock per slide. Explicit groups retain their IDs and mode
+      -- classes inside it, so merging cannot reveal a live-only action.
+      if block.t == "Div" then
+        block.classes = block.classes:filter(function(class) return class ~= "slide-nav" end)
+        block.classes:insert("slide-nav-group")
+      end
+      if navigation == nil then
+        navigation = pandoc.Div({}, pandoc.Attr("", { "slide-nav" }))
+        output:insert(navigation)
+      end
+      navigation.content:insert(block)
+      block = nil
     end
-    output:insert(block)
+    if block ~= nil then
+      output:insert(block)
+    end
   end
 
   if auto_stretch then
@@ -662,11 +734,6 @@ end
 -- Reveal's native visibility="uncounted" removes them from the total and
 -- freezes the shown number at the last counted slide, while the slides stay
 -- fully presentable and printable. An explicit visibility attribute wins.
-local function is_appendix_start(header)
-  return header.level == 1
-    and (header.classes:includes("appendix") or header.identifier == "appendix")
-end
-
 local function mark_appendix_uncounted(blocks)
   local in_appendix = false
   for _, block in ipairs(blocks) do
@@ -686,12 +753,18 @@ local function build_agendas(blocks)
   local output = pandoc.List()
   local current = 0
   local index = 1
+  local in_appendix = false
 
   blocks = mark_appendix_uncounted(blocks)
 
   while index <= #blocks do
     local block = blocks[index]
-    if agenda.enabled and block.t == "Header" and is_agenda_section(block) then
+    if block.t == "Header" and is_appendix_start(block) then
+      in_appendix = true
+    end
+    if agenda.enabled and block.t == "Header" and is_agenda_section(block)
+      and (agenda.include_appendix or not in_appendix)
+    then
       current = current + 1
       if not block.classes:includes("agenda-slide") then
         block.classes:insert("agenda-slide")
@@ -743,11 +816,27 @@ local function build_agendas(blocks)
   return enrich_research_layouts(output)
 end
 
+local function preserve_aside_mode(div)
+  if div.classes:includes("aside")
+    and (div.classes:includes("handout-only") or div.classes:includes("live-only"))
+  then
+    -- Pandoc's Reveal writer consumes `.aside` and discards its other
+    -- attributes. Keep gated asides as a note with the same layout contract.
+    div.classes = div.classes:filter(function(class) return class ~= "aside" end)
+    div.classes:insert("altmejd-aside")
+    if div.attributes.role == nil then
+      div.attributes.role = "note"
+    end
+    return div
+  end
+end
+
 if quarto.doc.is_format("revealjs") then
   return {
     { Meta = read_metadata },
     { Math = render_math, Link = render_qr_link },
     { Header = collect_sections },
     { Blocks = build_agendas },
+    { Div = preserve_aside_mode },
   }
 end

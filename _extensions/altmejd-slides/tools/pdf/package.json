@@ -1,0 +1,12 @@
+{
+  "name": "altmejd-slides-pdf",
+  "private": true,
+  "description": "Pinned offline PDF capture for installed altmejd-slides decks",
+  "dependencies": {
+    "decktape": "3.16.1"
+  },
+  "trustedDependencies": [],
+  "engines": {
+    "bun": ">=1.4.0"
+  }
+}

@@ -10,8 +10,10 @@ import {
   headersFileContent,
   planStaging,
   publicUrl,
+  rebaseAssetRefs,
   resolveArtifacts,
   resolveInput,
+  resolveStagingRef,
   resolveTarget,
   routePatterns,
   sanitizeSlug,
@@ -270,6 +272,57 @@ describe("asset reference collection", () => {
     expect(plan.directories).toEqual(["assets", "talk_files"]);
     expect(plan.files).toEqual(["portrait.jpg"]);
     expect(plan.outside).toEqual(["../secrets.txt"]);
+  });
+
+  test("dot paths cannot select the output root for wholesale copying", () => {
+    expect(planStaging(["./dot.svg", "./assets/plot.svg", "assets/../portrait.svg"])).toEqual({
+      directories: ["assets"],
+      files: ["dot.svg", "portrait.svg"],
+      outside: [],
+    });
+    expect(planStaging([".", "./", "assets/..", "assets/../"])).toEqual({
+      directories: [],
+      files: [],
+      outside: [".", "./", "assets/..", "assets/../"],
+    });
+  });
+
+  test("nested decks resolve shared assets without copying their whole parent", () => {
+    expect(
+      planStaging(
+        ["./plot.svg", "assets/image.svg", "../site_libs/revealjs/reveal.js", "../../secret.txt"],
+        "talks",
+      ),
+    ).toEqual({
+      directories: ["site_libs", "talks/assets"],
+      files: ["talks/plot.svg"],
+      outside: ["../../secret.txt"],
+    });
+    expect(resolveStagingRef("../../secret.txt", "talks")).toBeNull();
+    expect(resolveStagingRef("..\\site_libs\\font.woff2", "talks")).toBe("site_libs/font.woff2");
+  });
+
+  test("entry relocation preserves encoded assets, srcsets, and self links", () => {
+    const rebased = rebaseAssetRefs(
+      `
+      <link href="../site_libs/style.css">
+      <img data-src="./my%20figure%3F.svg?v=1&amp;x=2#part">
+      <img srcset="a.svg 1x, ../b.svg 2x,">
+      <a href="talk.html#/result">result</a>
+      <a href="#/result">slide</a><a href="https://example.org/paper">paper</a>
+    `,
+      "talks/talk.html",
+    );
+    expect(rebased).toContain('href="site_libs/style.css"');
+    expect(rebased).toContain('data-src="talks/my%20figure%3F.svg?v=1&amp;x=2#part"');
+    expect(rebased).toContain('srcset="talks/a.svg 1x, b.svg 2x,"');
+    expect(rebased).toContain('href="index.html#/result"');
+    expect(rebased).toContain('href="#/result"');
+    expect(rebased).toContain('href="https://example.org/paper"');
+  });
+
+  test("CSS preflight ignores disabled resource declarations", () => {
+    expect(collectCssRefs('/* url(missing.png) */ @import "kept.css";')).toEqual(["kept.css"]);
   });
 
   test("asset headers allow stale service on failed revalidation", () => {

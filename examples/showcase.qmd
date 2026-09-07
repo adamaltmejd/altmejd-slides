@@ -1,6 +1,6 @@
 ---
 title: "After Hours"
-subtitle: "Study-space access and course progress · a synthetic research-talk fixture"
+subtitle: "Study-space access and course progress · a synthetic research talk"
 author:
   - name: Adam Altmejd Selder
     affiliations:
@@ -29,57 +29,56 @@ slide-remote:
   disable-on-params: [pdf, handout]
 ---
 
-## Why evening study space? {#motivation}
+## Study time depends on when space is available {#motivation}
 
-- Many students combine full-time study with paid work and caring responsibilities.
-- Quiet study space is scarce precisely when flexible students can use it.
-- A score-based access rule creates a useful synthetic experiment.
+- In this example, paid work and caring duties constrain study schedules.
+- Evening capacity is limited, so not every applicant receives access.
+- An eligibility threshold creates a possible local comparison.
 
   - The threshold is known in advance.
-  - Students cannot precisely manipulate their score.
-  - Administrative records follow outcomes for four terms.
+  - Its credibility depends on students' inability to manipulate their score.
+  - Linked records follow course progress for four terms.
 
 ::: {.aside}
-Every institution, observation, citation, and estimate in this deck is
-synthetic. The citation line is intentionally long enough to exercise wrapping.
+This is a fictional study. All observations, figures, and estimates are
+synthetic; they illustrate the reasoning rather than establish an empirical finding.
 :::
 
 ::: notes
-Open with the constraint, not the design. The point of this fixture is that a
-real speaker note remains available to presenter view and Slide Remote, then
-appears in the handout PDF.
+Start with the student's scheduling constraint. Introduce the eligibility rule
+only after the audience understands why evening access might matter.
 :::
 
-## Question and preview {#question-and-preview}
+## Could evening access improve course progress? {#question-and-preview}
 
-Does reliable evening access help students make progress?
+Does eligibility for evening access help students make progress?
 
 ::: {.incremental}
 1. Access rises sharply at the eligibility threshold.
 2. Course completion improves during the first two terms.
-3. The effect is concentrated among students with inflexible schedules.
+3. Subgroup estimates are larger for students with inflexible schedules.
 :::
 
 ::: {.live-only}
-> A live-only prompt for the room: what sign would you expect, and why? This
-> blockquote sits in `::: {.live-only}`, so it never reaches the handout.
+> What would access change: study time, where students study, or both?
 :::
 
 ::: {.handout-only}
-A `.handout-only` reading note: wrap any block in `::: {.handout-only}` to add
-guidance that appears only in `?handout=true` and the handout PDF, where the
-live deck shows a discussion prompt instead.
+Reading guide: distinguish the effect of eligibility, the effect of receiving
+access, and the proposed study-time mechanism. They are different questions.
 :::
 
 ::: notes
-Fragments must collapse to one final-state page in both PDF variants.
+Invite two explanations before revealing the preview. Return to them after
+the estimates: neither larger subgroup effects nor a positive average effect
+identifies the mechanism by itself.
 :::
 
 # Setting and data
 
 A SIMPLE RULE, A LINKED PANEL, AND A SHARP THRESHOLD
 
-## The access rule {#access-rule}
+## A score of 60 determines eligibility {#access-rule}
 
 :::: {.columns}
 ::: {.column width="32%"}
@@ -88,30 +87,29 @@ A SIMPLE RULE, A LINKED PANEL, AND A SHARP THRESHOLD
 - Capacity and opening hours are fixed for the term.[^assignment]
 :::
 ::: {.column width="68%"}
-![](assets/threshold.svg){fig-alt="Synthetic score distribution and access jump at a threshold of sixty"}
+![](assets/threshold.svg){fig-alt="Synthetic evening-access rates jump at the eligibility threshold of sixty"}
 :::
 ::::
 
 [^assignment]: The fictional rule is deterministic within each application round.
 
-## The space itself {.full-bleed background-image="assets/field.svg" background-size="cover" #study-space}
+## A room available after the working day {.full-bleed background-image="assets/field.svg" background-size="cover" background-alt="An illustrated university reading room at dusk" #study-space}
 
 Reading rooms stay open until midnight during teaching terms.
 
-A `.full-bleed` slide: `background-image` fills the canvas, the title and
-these captions ride on scrim chips, and the credit is a `.attribution` div.
+The intervention changes access to a quiet room, not teaching or course content.
 
 ::: {.attribution}
 Synthetic dusk scene · generated illustration, not a photograph
 :::
 
-## A descriptive pattern {#descriptive-pattern}
+## Access groups follow different completion paths {#descriptive-pattern}
 
 ![](assets/trend.svg){.r-stretch fig-alt="Synthetic completion paths for students with and without evening access"}
 
 ::: {.aside}
-Descriptive paths are not causal. Values are percentages in a fully synthetic
-panel constructed only to test a labelled research figure.
+These synthetic group averages are descriptive. Differences may reflect who
+receives access as well as what access changes.
 :::
 
 ::: {.slide-nav}
@@ -127,33 +125,32 @@ panel constructed only to test a labelled research figure.
 | Within bandwidth | 4,216 | 34% |
 | Linked to outcomes | 4,087 | 33% |
 
-- The running variable is stored as `priority_score`.
+- Eligibility is measured from the recorded priority score.
 - Outcomes come from a linked four-term panel.
 
 ::: {.aside}
-Synthetic administrative records, deliberately formatted like a compact
-research-table source note.
+The linked estimation sample retains 4,087 of 4,216 applicants within the
+chosen bandwidth. All counts describe the synthetic example.
 :::
 
-## The sample at a glance {#sample-at-a-glance}
+## The local sample contains 4,087 linked students {#sample-at-a-glance}
 
 ::: {.stat-row}
 [12,480]{.stat} applications received
 
-[4,087]{.stat} students within bandwidth
+[4,087]{.stat} linked students within bandwidth
 
 [4]{.stat} terms of linked outcomes
 :::
 
-A `.stat-row` keeps up to three magnitudes readable from the back of a seminar
-room. Each pair is one paragraph inside `::: {.stat-row}`, number first:
-`[4,087]{.stat} students within bandwidth`.
+The design compares applicants close to the cutoff. It does not use all
+12,480 applicants as if they were equally comparable.
 
 # Research design
 
 LOCAL COMPARISONS AROUND A PRE-ANNOUNCED ACCESS RULE
 
-## From score to access {#assignment-pathway}
+## Eligibility changes access; access may change progress {#assignment-pathway}
 
 ![](assets/pathways.svg){fig-alt="A pathway from priority score through evening access and study time to course progress"}
 
@@ -162,11 +159,11 @@ Synthetic design diagram · arrows encode the estimand, not empirical findings
 :::
 
 ::: notes
-The attribution is a direct slide child so it stays compatible with Reveal
-plugins and does not collide with the footer.
+Read the upper arrows as the proposed causal chain. Schedule constraints
+could modify the effect of access without being changed by eligibility.
 :::
 
-## Estimating equations {#estimating-equations}
+## An access effect also needs the first stage {#estimating-equations}
 
 **First stage**
 
@@ -178,7 +175,7 @@ D_{it} &= \pi_0 + \pi_1 \operatorname{Above}_{it}
 \end{aligned}
 $$
 
-**Second stage**
+**Effect of receiving access**
 
 $$
 \begin{aligned}
@@ -188,15 +185,18 @@ Y_{it} &= \alpha + \beta \widehat{D}_{it}
 \end{aligned}
 $$
 
+The outcome jump measures eligibility's effect. Divide by the access jump
+to recover $\beta$ under the identifying assumptions.
+
 ::: {.slide-nav}
 [First stage: $\widehat{\pi}_1$](#first-stage)
 :::
 
-## What must hold {#what-must-hold}
+## The comparison needs continuity at the cutoff {#what-must-hold}
 
 ::: {.callout-note title="Estimand"}
-$\beta$ is the local average effect of evening access for applicants at the
-margin of eligibility, $r_i = 0$.
+$\beta$ is the local average effect of access for applicants whose take-up
+changes with eligibility near $r_i = 0$.
 :::
 
 ::: {.callout-important title="Identifying assumption"}
@@ -210,32 +210,31 @@ its observable implications.
 :::
 
 ::: {.aside}
-Semantic boxes are Quarto callouts restyled by the theme: `.callout-note`
-defines, `.callout-tip` states results, `.callout-important` holds
-assumptions, and `.callout-warning` flags caveats.
+An interpretation as an effect of access also requires a relevant first
+stage, monotonic take-up, and no direct effect of eligibility beyond access.
 :::
 
-## First stage: access at the cutoff {#first-stage}
+## Eligibility raises access by 31 percentage points {#first-stage}
 
 ![](assets/threshold.svg){.r-stretch fig-alt="Synthetic regression discontinuity plot with a large access jump at the threshold"}
 
 - Access increases by **31 percentage points** at the threshold.
-- The first-stage interval excludes zero in every bandwidth shown.
+- The jump supplies the first-stage variation; uncertainty must be checked separately.
 
 ::: {.slide-nav}
 [Estimating equations](#estimating-equations){.back}
 :::
 
-## Design diagnostics {#design-diagnostics}
+## Diagnostics probe the comparison's credibility {#design-diagnostics}
 
 :::: {.columns}
 ::: {.column width="50%"}
-**Predetermined outcomes**
+**Predetermined outcomes: illustrative check**
 
 ![](assets/estimate.svg){fig-alt="Synthetic diagnostic estimate with a confidence interval"}
 :::
 ::: {.column width="50%"}
-**Covariate balance**
+**Covariate balance: illustrative check**
 
 ![](assets/portrait.svg){fig-alt="Synthetic dot-and-whisker balance estimates"}
 :::
@@ -243,7 +242,7 @@ assumptions, and `.callout-warning` flags caveats.
 
 [Main result](#main-effect) · [Placebo](#appendix-placebo)
 
-## Specification details {#specification-details}
+## Fit separate trends within 12 score points {#specification-details}
 
 - $r_{it} = s_{it} - 60$ is the centered score; $\operatorname{Above}_{it}=\mathbf{1}[r_{it}\geq0]$.
 - Local linear fits are estimated separately on either side of the cutoff.
@@ -252,13 +251,13 @@ assumptions, and `.callout-warning` flags caveats.
   - Application-round fixed effects absorb common shocks.
   - Standard errors are clustered by student.
 
-- The estimand is local: $\beta = \mathbb{E}[Y_i(1)-Y_i(0)\mid r_i=0]$.
+- The estimand is local to compliers: $\beta = \mathbb{E}[Y_i(1)-Y_i(0)\mid r_i=0,\ \text{complier}]$.
 
 # Results
 
 EFFECTS, UNCERTAINTY, AND USEFUL ALTERNATIVES
 
-## Outcomes around the threshold {#outcome-buildup}
+## The fitted outcome changes at the cutoff {#outcome-buildup}
 
 ::: {.r-stack}
 ![](assets/buildup-points.svg){width="1150" fig-alt="Synthetic binned course completion by priority score"}
@@ -267,38 +266,38 @@ EFFECTS, UNCERTAINTY, AND USEFUL ALTERNATIVES
 :::
 
 ::: {.aside}
-A figure build-up: images stacked in `::: {.r-stack}`, later layers tagged
-`{.fragment}`. Layers share the same base image, so each step reads as adding
-to the plot.
+Points show binned synthetic outcomes; lines summarize local trends on each
+side. The discontinuity is distinct from the overall slope.
 :::
 
 ::: notes
-The fit layer shares the points layer's base, so the fragment reads as adding
-the fit. PDFs keep only the final state.
+First ask the audience to locate the threshold in the points. Then reveal
+the fitted lines and distinguish the outcome jump from the first-stage jump.
 :::
 
-## Main effect after two terms {#main-effect}
+## Eligibility raises completion by 0.18 courses {#main-effect}
 
 ::: {.columns}
 ::: {.column width="56%"}
 ![](assets/estimate.svg){fig-alt="Synthetic main estimate with a confidence interval"}
 :::
 ::: {.column width="44%"}
-- Point estimate: **0.18 courses**
+- Point estimate: **0.18 courses per term**
 - 95% interval: **0.07–0.29**
-- Pre-specified primary outcome
+- Mean completion over the first two terms
 - $N=4{,}087$ students
 :::
 :::
 
 ::: {.aside}
-Illustrative values only. This box is a `::: {.aside}`: it reserves its space
-in live slides and stacks above the speaker note in handout mode.
+This is the effect of eligibility near the threshold, not the IV effect of
+receiving access. Values and intervals are illustrative.
 :::
 
 ::: notes
-Pause on the interval before discussing magnitude. This is the canonical
-figure-plus-aside-plus-note handout regression.
+Pause on the interval before discussing magnitude. Explain that 0.18 is an
+average across applicants, not a claim that each student completes the same
+fraction of a course.
 :::
 
 ::: {.slide-nav}
@@ -307,28 +306,26 @@ figure-plus-aside-plus-note handout regression.
 [Robustness](#robustness-summary)
 :::
 
-## The headline result {.statement #headline-result}
+## A modest gain in the synthetic comparison {.statement #headline-result}
 
 ::: {.stat-row}
-[**+0.18**]{.stat} courses completed per term at the threshold
+[**+0.18**]{.stat} courses completed per term at the eligibility threshold
 :::
 
-Reliable evening access moves real course progress for marginal applicants —
-in fully synthetic data.
+An offer of evening access could support progress near the cutoff.
 
 ::: {.aside}
-A statement slide: add `{.statement}` to the heading, which becomes the
-kicker. The number is `[**+0.18**]{.stat}` inside a `::: {.stat-row}`; bold
-gives it the accent ink.
+Synthetic eligibility estimate; 95% interval 0.07–0.29. The effect of receiving
+access additionally depends on take-up; study hours are a separate mechanism.
 :::
 
-## Effects over time and outcomes {#effects-over-time}
+## Timing and alternative outcomes add context {#effects-over-time}
 
 :::: {.columns}
 ::: {.column width="50%"}
-**Course completion**
+**Completion paths: descriptive**
 
-![](assets/trend.svg){fig-alt="Synthetic dynamic effects on course completion"}
+![](assets/trend.svg){fig-alt="Descriptive synthetic completion paths for access and comparison groups"}
 :::
 ::: {.column width="50%"}
 **Credits earned**
@@ -339,12 +336,12 @@ gives it the accent ink.
 
 [Main result](#main-effect){.back} · [Alternative outcome](#appendix-alternative)
 
-## A possible pathway {#possible-pathway}
+## Schedule constraints suggest a possible pathway {#possible-pathway}
 
 :::: {.columns}
 ::: {.column width="42%"}
-- Evening access increases usable study time.
-- The largest gains appear for students with inflexible schedules.
+- Evening access may increase usable study time.
+- The largest subgroup estimates are for students with inflexible schedules.
 - This pattern is suggestive, not a separately identified mechanism.
 :::
 ::: {.column width="58%"}
@@ -356,7 +353,7 @@ gives it the accent ink.
 [Mechanism check](#appendix-mechanism)
 :::
 
-## Robustness summary {#robustness-summary}
+## Nearby specifications give similar estimates {#robustness-summary}
 
 | Specification | Estimate | Standard error | $N$ |
 |:--------------|---------:|---------------:|----:|
@@ -366,8 +363,8 @@ gives it the accent ink.
 | Covariate adjustment | 0.18 | 0.06 | 4,087 |
 
 ::: {.table-note}
-Standard errors clustered by student · this source line is a `.table-note`
-div, and the boxed coefficient above is `[0.18]{.emph}`.
+Synthetic eligibility effects on courses completed per term. Standard errors
+are clustered by student; bandwidth changes alter the estimation sample.
 :::
 
 ::: {.slide-nav}
@@ -376,7 +373,7 @@ div, and the boxed coefficient above is `[0.18]{.emph}`.
 [Alternative outcome](#appendix-alternative)
 :::
 
-## Heterogeneity by baseline schedule {#heterogeneity}
+## Inflexible schedules have the largest estimate {#heterogeneity}
 
 | Subgroup, by baseline schedule flexibility | Estimate | Standard error | Share of sample |
 |:-------------------------------------------|---------:|---------------:|----------------:|
@@ -385,25 +382,24 @@ div, and the boxed coefficient above is `[0.18]{.emph}`.
 | Fully flexible schedule | 0.09 | 0.08 | 27% |
 
 ::: {.table-note}
-Estimates come from the baseline specification interacted with the
+Eligibility effects come from the baseline specification interacted with the
 schedule-flexibility indicator recorded at application; standard errors are
-clustered by student. A wide table like this one shows how a paired
-`.table-note` spans the full table width and left-aligns instead of wrapping
-into a narrow centered stack.
+clustered by student. The table alone does not establish that subgroup effects
+differ statistically or identify why they differ.
 :::
 
-## What the design identifies {.dark-bg background-color="#1e293b" #design-identifies}
+## The eligibility effect is local {.dark-bg background-color="#1e293b" #design-identifies}
 
-> Near the threshold, access changes sharply while observed student
-> characteristics change smoothly.
+> A credible interpretation requires access to change sharply while other
+> determinants of course progress remain smooth at the threshold.
 
 ::: {.incremental}
 - The estimate is local to marginal applicants.
-- It combines access, opening hours, and the option value of a quiet room.
+- It combines take-up, opening hours, and the option of a quiet room.
 - It does not identify the effect of studying one additional hour.
 :::
 
-## Scope condition {.light-bg background-color="#ffeac2" #scope-condition}
+## Other institutions may see different effects {.light-bg background-color="#ffeac2" #scope-condition}
 
 - The mock institution has scarce evening capacity and a transparent rule.
 - Effects may differ when:
@@ -412,8 +408,8 @@ into a narrow centered stack.
   - online resources are close substitutes; or
   - students can precisely manipulate assignment.
 
-The [design notes](https://quarto.org/docs/presentations/revealjs/) link remains
-distinguishable without requiring a network request to render the deck.
+Return to the [identifying assumptions](#what-must-hold) before extending
+the interpretation beyond this setting.
 
 # Conclusion
 
@@ -421,17 +417,17 @@ WHAT THE SYNTHETIC EXERCISE WOULD SUPPORT
 
 ## Three takeaways {#three-takeaways}
 
-1. A transparent threshold creates a credible local comparison.
-2. Evening access raises short-run course progress in the mock data.
-3. Schedule constraints provide a plausible—but not separately identified—pathway.
+1. A transparent threshold can support a credible local comparison.
+2. Eligibility raises short-run course progress in the mock data.
+3. Schedule constraints suggest a pathway that needs separate evidence.
 
 ::: {.callout-tip title="Result"}
-At the margin of eligibility, evening access raises completion by 0.18
-courses per term over the first two terms.
+In the synthetic example, eligibility raises completion by 0.18 courses per
+term near the threshold over the first two terms. This is an offer effect.
 :::
 
 ::: {.attribution}
-`altmejd-slides` canonical showcase · all results synthetic
+After Hours · synthetic study · no empirical policy conclusion
 :::
 
 ::: notes
@@ -442,10 +438,7 @@ Return to the opening constraint, then state the scope condition once.
 
 adam\@altmejd.se · [adamaltmejd.se](https://adamaltmejd.se)
 
-Draft, slides, and replication code: [github.com/adamaltmejd](https://github.com/adamaltmejd)
-
-A closing slide: `## Thank you {.closing-slide}` with contact lines; the code
-in the corner is generated from `[alt text](url){.qr}` at render time.
+Slides and example source: [github.com/adamaltmejd/altmejd-slides](https://github.com/adamaltmejd/altmejd-slides)
 
 [QR code linking to adamaltmejd.se](https://adamaltmejd.se){.qr}
 
@@ -458,8 +451,8 @@ BACKUP CHECKS AND IMPLEMENTATION DETAILS
 ![](assets/estimate.svg){.r-stretch fig-alt="Synthetic estimate for credits earned"}
 
 ::: {.aside}
-Navigation chips: internal links inside `::: {.slide-nav}`. Add `{.back}` to
-the return link and `{.primary}` only to the one emphasized action.
+Credits earned provide a complementary measure of progress. Interpret this
+illustrative estimate alongside the primary completion outcome.
 :::
 
 ::: {.slide-nav}
@@ -483,33 +476,32 @@ the return link and `{.primary}` only to the one emphasized action.
 :::
 
 ::: {.aside}
-An explicit one-panel layout: `::: {.figure-panels}` with a single
-`::: {.figure-panel}` child whose `**bold**` first line is the panel label.
-Two-image column pairs upgrade to this layout automatically.
+The summary table varies the bandwidth and related choices. This schematic
+interval shows how estimates and uncertainty should be reported together.
 :::
 
 ::: {.slide-nav}
 [Robustness summary](#robustness-summary){.back}
 :::
 
-## Placebo outcome and reserved footer {#appendix-placebo}
+## Placebo checks need their own evidence {#appendix-placebo}
 
 :::: {.columns}
 ::: {.column width="50%"}
-**Before assignment**
+**Before assignment: illustrative check**
 
 ![](assets/estimate.svg){fig-alt="Synthetic pre-assignment placebo estimate"}
 :::
 ::: {.column width="50%"}
-**Unrelated outcome**
+**Unrelated outcome: illustrative check**
 
 ![](assets/portrait.svg){fig-alt="Synthetic unrelated-outcome estimates"}
 :::
 ::::
 
 ::: {.aside}
-Both placebo intervals include zero. This multi-line aside must remain above
-the navigation row while both figure panels retain useful height.
+Pre-assignment and unrelated outcomes should show no threshold effect. These
+illustrative panels specify the checks; they do not establish that the design passes.
 :::
 
 ::: {.slide-nav}
@@ -526,8 +518,8 @@ flexibility; all quantities are synthetic.
 :::
 
 ::: notes
-The direct-child order is media, visible aside, note, then navigation in the
-handout even though navigation appears earlier in the source on other slides.
+Explain why schedule flexibility was measured before assignment. A subgroup
+defined by a post-treatment choice would change the interpretation.
 :::
 
 ::: {.slide-nav}
@@ -535,38 +527,38 @@ handout even though navigation appears earlier in the source on other slides.
 [Main effect](#main-effect)
 :::
 
-## Reproducible specification {#reproducible-specification}
+## Prepare the local comparison {#reproducible-specification}
 
 ```{.r code-line-numbers="1-2|3-5|6"}
-sample <- applicants[abs(priority_score - 60) < 12, ]
-sample$above <- sample$priority_score >= 60
-first_stage <- lm(access ~ above * centered_score, data = sample)
-outcome <- lm(courses_completed ~ fitted(first_stage), data = sample)
-interval <- confint(outcome, "fitted(first_stage)")
-c(estimate = coef(outcome)[2], lower = interval[1], upper = interval[2])
+sample <- subset(applicants, abs(priority_score - 60) < 12)
+sample$centered_score <- sample$priority_score - 60
+sample$above <- as.integer(sample$centered_score >= 0)
+design <- model.matrix(~ above * centered_score, data = sample)
+rounds <- factor(sample$application_round)
+cluster <- sample$student_id
 ```
 
 ::: notes
-This is inert illustrative code. Handout mode must not leave non-selected lines
-dimmed, and PDF export must keep only the final highlighted state.
+This inert example prepares the design inputs only; no estimate or interval
+is computed. Eligibility effects use the local outcome discontinuity. Access
+effects require an instrumental-variables estimator and student-clustered
+inference, not ordinary OLS standard errors from a regression on fitted treatment.
 :::
 
 ::: {.slide-nav}
 [Alternative outcome](#appendix-alternative){.back}
 :::
 
-## Design contract {.light-bg background-color="#f1f5f9" #design-contract}
+## What a real study would still need {.light-bg background-color="#f1f5f9" #design-contract}
 
-This compact deck now exercises the normal development surface:
+The synthetic exercise leaves empirical work to do:
 
-- multi-author title metadata and consistent gradient rules;
-- plain section agendas, footers, progress, and `c/t` numbering;
-- nested text, tables, equations, code, fragments, and custom backgrounds;
-- single and paired SVGs, varied aspect ratios, asides, notes, and attribution;
-- reciprocal internal navigation and a compact appendix link set;
-- statement and stat-row emphasis, semantic callouts, figure build-ups;
-- a full-bleed photograph slide, a closing slide, and mode-gated content.
+- verify the assignment rule and actual take-up;
+- assess score manipulation, covariate continuity, and missing outcomes;
+- report first-stage strength, uncertainty, and sensitivity to bandwidth;
+- distinguish access effects from mechanisms and subgroup differences;
+- establish whether the local result is relevant to a broader policy.
 
 ::: {.attribution}
-Fast to render · deterministic · offline
+Synthetic example · assumptions require evidence
 :::

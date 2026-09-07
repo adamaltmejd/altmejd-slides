@@ -7,7 +7,7 @@
       "!!_extensions/altmejd-slides/resources/katex",
       "!!**/*_files",
       "!!_site",
-      "!!node_modules",
+      "!!**/node_modules",
       "!!output",
       "!!tmp"
     ]

@@ -137,6 +137,25 @@ try {
     throw new Error("deck bundles slide-remote but the plugin did not register");
   }
 
+  // Reveal defers figures and backgrounds until their slides approach the
+  // viewport. Visiting only the title cannot validate a relocated asset tree.
+  const slides = await page.evaluate(() =>
+    Array.from(document.querySelectorAll(".reveal .slides section"))
+      .filter((slide) => !slide.querySelector(":scope > section"))
+      .map((slide) => globalThis.Reveal.getIndices(slide)),
+  );
+  for (const indices of slides) {
+    await page.evaluate(({ h, v }) => globalThis.Reveal.slide(h, v), indices);
+    await page.waitForFunction(
+      () =>
+        [...globalThis.Reveal.getCurrentSlide().querySelectorAll("img")].every(
+          (img) => img.complete && img.naturalWidth > 0,
+        ),
+      { timeout: 10000 },
+    );
+    await page.waitForNetworkIdle({ idleTime: 100, timeout: 10000 });
+  }
+
   if (failedRequests.length > 0) {
     throw new Error(`resources failed to load:\n  ${failedRequests.join("\n  ")}`);
   }
@@ -144,7 +163,9 @@ try {
     throw new Error(`browser console errors:\n  ${consoleErrors.join("\n  ")}`);
   }
 
-  console.log(`prefix serving ok: /${slug}/ loads, navigates, and resolves every resource`);
+  console.log(
+    `prefix serving ok: /${slug}/ loads, navigates, and resolves resources on ${slides.length} slides`,
+  );
 } finally {
   await browser.close();
   server.close();

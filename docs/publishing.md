@@ -65,7 +65,8 @@ altmejd-slides:
 `host` and `zone` are non-secret. The slug must be 1-46 lowercase letters,
 digits, or interior hyphens; `index`, `gateway`, and `assets` are reserved. A
 project with several QMD files must pick the deck with
-`make publish PUBLISH_ARGS="--input talk.qmd"`.
+`make publish PUBLISH_ARGS="--input talk.qmd"`. Nested inputs such as
+`--input talks/talk.qmd` also work when run from the project root.
 
 ## Authentication
 
@@ -108,12 +109,29 @@ Useful flags (pass via `PUBLISH_ARGS="..."`):
 - `--force` — deploy even when the staged content hash is unchanged.
 - `--no-verify` — skip the post-deploy URL check.
 
+To review exactly what would be uploaded, run
+`make publish PUBLISH_ARGS="--stage-only"` and open the printed
+`staged-files.json` path. It lists every public file, its size, and its source
+or configured artifact name. The manifest stays beside `public/` and is never
+published. A failed staging run removes any previous manifest in that staging
+directory so it cannot be mistaken for a successful preflight.
+
 Both deck layouts work: a standalone QMD that renders beside its source, and
 a Quarto project whose `_quarto.yml` sets `project.output-dir` (assets are
-then staged from that output directory). Limitations: top-level stylesheets
-have one level of relative `url()`/`@import` targets staged; assets
-referenced only from deeper CSS chains outside the deck's `_files` tree are
-not detected.
+then staged from that output directory). Nested decks retain their asset
+paths inside the public slug. Their entry HTML moves to `index.html`, with
+relative URLs adjusted to keep figures, self links, and shared `../site_libs`
+working. CSS `url()` and `@import` references are followed recursively from
+each stylesheet's own directory. Paths may traverse within the rendered output
+tree but cannot escape it or select its root for wholesale copying.
+
+Referenced asset directories are copied in full, including their non-hidden
+contents. Keep those directories dedicated to public assets and review the
+manifest before publishing; an unrelated file inside an explicitly referenced
+asset directory is part of that directory's upload. A direct reference such
+as `./figure.svg` copies that file only. Resources loaded only by JavaScript,
+or through absolute site-root URLs, still need a compatible relative asset
+layout; the publisher does not infer or rewrite them.
 
 If a deploy succeeds but the public URL cannot be verified (typically DNS
 still propagating after the first bootstrap), the publish exits non-zero but
@@ -127,8 +145,9 @@ the unchanged check and collision protection follow the repository.
 
 ## Publishing PDFs and other artifacts
 
-Extra files publish only when explicitly configured — handout or
-speaker-note PDFs are never included implicitly:
+Extra files outside referenced public asset directories publish only when
+explicitly configured. A handout or speaker-note PDF beside the deck is not
+included unless it is linked from the HTML or configured as an artifact:
 
 ```yaml
 altmejd-slides:

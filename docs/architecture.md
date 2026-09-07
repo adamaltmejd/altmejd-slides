@@ -10,7 +10,9 @@ default design rather than research and teaching presets.
 3. `examples/showcase.qmd` is the canonical synthetic research-talk fixture
    for visual development and full-slide browser sweeps.
 4. `tests/fixtures/` contains adversarial limits and deck-wide agenda variants.
-5. `tools/` renders already-built Reveal HTML into reproducible PDFs.
+5. `_extensions/altmejd-slides/tools/pdf/` renders already-built Reveal HTML
+   into reproducible PDFs; `tools/render_revealjs_pdfs.py` is the repository
+   entry point for this single implementation.
 
 Repository tooling, examples, tests, and documentation are excluded from
 starter-template output by `.quartoignore`. Ordinary `quarto add` already
@@ -59,14 +61,17 @@ slides. No custom counter code is involved.
 Automatic agendas are on by default, without a visible heading or list markers.
 The same Lua filter collects level-one headings, inserts the configured agenda
 content for each section divider, and treats direct section content as a kicker.
+Appendix sections are omitted unless `agenda.include-appendix` is enabled. The
+current section carries an accessible current-location state and stronger emphasis.
 It also recognizes the narrow, semantic
 case of two Quarto columns that each contain a figure and enriches them with
 the extension's fill-height panel class. Because Quarto skips its own
 auto-stretch on any slide carrying an `::: {.aside}`, the filter restores it
 for a slide whose only figure is a top-level image: a bare image takes the
 stretch class, while a captioned or linked one keeps its wrapper and takes the
-fill-height layout class instead. `auto-stretch: false` disables both. It does
-not replace Quarto's slide construction.
+fill-height layout class instead. `auto-stretch: false` disables both. Deliberate `.nostretch`, explicit height, and absolute image positioning remain
+in force; `.no-figure-panels` opts columns out of the panel transformation. It
+does not replace Quarto's slide construction.
 
 The remaining slide primitives are pure theme contracts with no Lua
 involvement: `.statement`, `.closing-slide`, and `.full-bleed` are slide
@@ -84,7 +89,7 @@ is recorded in `docs/design.md`.
 The one generated asset is the QR code: a `{.qr}` link is encoded at render
 time by the vendored `qrencode.lua` (speedata/luaqrcode, BSD-3, license in
 the file header) and embedded as an SVG data URI with its four-module quiet
-zone inside the image. Like KaTeX and the typefaces, this keeps rendering
+zone inside the image, retaining the original hyperlink around it. Like KaTeX and the typefaces, this keeps rendering
 offline; the encoder loads lazily, so decks without QR links never touch it.
 
 ## Browser behavior
@@ -115,7 +120,22 @@ would mask regressions that the checks and field reports should surface.
 The runtime disables Reveal 5.1's automatic narrow-screen scroll view. Quarto's
 vertical section stacks are otherwise promoted to extra scroll pages and break
 the title and panel layouts. Phones therefore receive the intact scaled slide
-canvas; landscape orientation is the useful review mode.
+canvas, with 44-pixel navigation controls outside it on narrow screens.
+Inactive leaf slides are inert, and the theme respects Reveal's display culling.
+
+`resources/reader.js` converts `?reading=true` into a flowing document after
+Reveal initializes. It snapshots the final fragment state, resolves slide links,
+loads lazy media, preserves the selected delivery gate, then destroys Reveal.
+Its separate stylesheet supplies readable text and single-column phone layouts.
+Speaker notes require `handout=true`; these display modes do not remove content
+from the delivered source HTML. A menu link and a narrow-screen button expose
+the reader without enabling Reveal's incompatible native scroll mode.
+
+`resources/preflight.js` runs only with `?check=true`. It checks visible layout,
+clipped code/notes, image availability and alt attributes, and internal links.
+It restores the current slide and configuration without adding traversal history,
+then presents a local dialog. It neither shrinks content nor claims a full
+accessibility audit. Reading mode takes precedence if both modes are requested.
 
 Slide Remote 0.5.3 is embedded using Quarto's extension mechanism and enabled
 by the format. Its filter and Reveal plugin remain separate from theme code;
@@ -132,15 +152,26 @@ a deterministic static/PDF state. `@revealjs/react` does not own the deck.
 
 ## PDF contract
 
-Quarto produces HTML once. The repository PDF tool consumes that HTML without
+Quarto produces HTML once. The installable PDF tool consumes that HTML without
 re-executing the document and produces:
 
 - `slides`: final fragment state, notes hidden;
 - `handout`: final fragment state, notes visible.
 
-The renderer uses pinned DeckTape in normal Reveal mode. Cache identity covers
-the HTML, referenced local assets, the Quarto dependency tree, mode, viewport,
-renderer configuration, lockfile, and browser fingerprint.
+The renderer uses pinned DeckTape in normal Reveal mode. Its package manifest
+and lockfile ship beside the Python implementation. `make pdf-setup` explicitly
+installs the locked packages without browser downloads or dependency scripts;
+`make pdf` renders the deck and captures both variants offline. The repository
+entry point and installed starter use the same implementation.
+
+Cache identity covers the HTML, recursively referenced local HTML/SVG/CSS
+assets, the Quarto dependency trees, mode, viewport, renderer configuration,
+lockfile, and browser fingerprint. Scripted embedded documents and JavaScript
+outside Quarto's bundled resource trees bypass caching because their dependency
+closure is unknown. `--no-cache` covers custom top-level code with external
+local dependencies or time-dependent content. The scanner stays within
+referenced resources and Quarto's `NAME_files`/`site_libs` directories, even
+when the site directory is the author's project root.
 
 Presentation PDFs are visual artifacts, not guaranteed PDF/UA documents. A
 paper-like tagged handout would be a separate output format.

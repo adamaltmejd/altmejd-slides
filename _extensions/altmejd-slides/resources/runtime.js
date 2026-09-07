@@ -1,10 +1,15 @@
 (() => {
-  const value = new URLSearchParams(window.location.search).get("handout");
+  const params = new URLSearchParams(window.location.search);
+  const value = params.get("handout");
   const handout = value !== null && value !== "false" && value !== "0";
+  const reading =
+    params.has("reading") && !["false", "0"].includes(params.get("reading")) && !params.has("pdf");
 
   if (handout) {
     document.documentElement.classList.add("altmejd-handout");
   }
+  document.documentElement.classList.toggle("altmejd-reading", reading);
+  document.documentElement.classList.toggle("altmejd-pdf", params.has("pdf"));
 
   // Quarto's line-highlight clones are Reveal fragments. They can leave a
   // handout capture showing only one highlighted step, so remove the source
@@ -22,7 +27,7 @@
   };
 
   let mutationObserver = null;
-  if (handout) {
+  if (handout || reading) {
     stripLineHighlights(document);
     mutationObserver = new MutationObserver((records) => {
       records.forEach((record) => {
@@ -32,16 +37,28 @@
     mutationObserver.observe(document.documentElement, { childList: true, subtree: true });
   }
 
+  const visible = (element) => {
+    const style = getComputedStyle(element);
+    return (
+      style.display !== "none" &&
+      style.visibility !== "hidden" &&
+      element.getBoundingClientRect().height > 0
+    );
+  };
+
   const directNote = (slide) =>
-    Array.from(slide.children).find((child) => child.matches("aside.notes"));
+    Array.from(slide.children).find((child) => child.matches("aside.notes") && visible(child));
 
   const directAside = (slide) =>
     Array.from(slide.children).find(
-      (child) => !child.matches(".notes") && child.matches(".aside, aside:not(.notes)"),
+      (child) =>
+        !child.matches(".notes") &&
+        child.matches(".aside, .altmejd-aside, aside:not(.notes)") &&
+        visible(child),
     );
 
   const directNavigation = (slide) =>
-    Array.from(slide.children).find((child) => child.matches(".slide-nav"));
+    Array.from(slide.children).find((child) => child.matches(".slide-nav") && visible(child));
 
   const setMeasuredHeight = (slide, property, element) => {
     if (element) {
@@ -165,8 +182,10 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     mutationObserver?.disconnect();
-    if (handout) {
+    if (handout || reading) {
       stripLineHighlights(document);
+    }
+    if (handout) {
       document.body.classList.add("altmejd-handout");
     }
 
@@ -178,6 +197,45 @@
     // section stacks are not valid scroll pages. Keep the scaled slide canvas
     // on phones until Quarto exposes a reliable format-level override.
     window.Reveal.configure({ scrollActivationWidth: 0 });
+    if (reading) return;
+
+    const updateCanvasScale = () => {
+      const reveal = window.Reveal;
+      const config = reveal.getConfig();
+      const captureScale = params.has("pdf")
+        ? Math.min(
+            window.innerWidth / Number(config.width),
+            window.innerHeight / Number(config.height),
+          )
+        : 1;
+      const root = reveal.getRevealElement();
+      root.style.setProperty("--altmejd-scale", reveal.getScale());
+      root.style.setProperty(
+        "--altmejd-chrome-scale",
+        Number.isFinite(captureScale) ? captureScale : 1,
+      );
+    };
+
+    const updateInteraction = () => {
+      const reveal = window.Reveal;
+      const current = reveal.getCurrentSlide();
+      const overview = reveal.isOverview();
+      // aria-hidden does not remove links from the tab order. Only leaf slides
+      // are made inert, so their current vertical-stack parent stays usable.
+      document.querySelectorAll(".reveal .slides section").forEach((slide) => {
+        if (!slide.querySelector(":scope > section")) {
+          slide.inert = !overview && slide !== current;
+        }
+      });
+      const focusedSlide = document.activeElement?.closest(".slides section");
+      if (!overview && focusedSlide?.inert) {
+        current.setAttribute("tabindex", "-1");
+        current.focus({ preventScroll: true });
+      }
+      const menuButton = document.querySelector(".slide-menu-button a");
+      menuButton?.setAttribute("aria-label", "Open slide menu");
+      updateCanvasScale();
+    };
 
     // Measure synchronously so late-loading media is reflected before the
     // caller's next frame; fall back to the queue (which retries) only when
@@ -292,11 +350,13 @@
     };
 
     window.Reveal.on("ready", (event) => {
+      updateInteraction();
       observeSlideBoxes(event.currentSlide);
       queueUpdate(event.currentSlide);
       recoverBrokenMedia(event.currentSlide);
     });
     window.Reveal.on("slidechanged", (event) => {
+      updateInteraction();
       observeSlideBoxes(event.currentSlide);
       queueUpdate(event.currentSlide);
       recoverBrokenMedia(event.currentSlide);
@@ -312,8 +372,12 @@
     window.Reveal.on("slidetransitionend", (event) => {
       queueUpdate(event.currentSlide);
     });
+    window.Reveal.on("overviewshown", updateInteraction);
+    window.Reveal.on("overviewhidden", updateInteraction);
+    window.Reveal.on("resize", updateCanvasScale);
 
     if (window.Reveal.isReady?.()) {
+      updateInteraction();
       const slide = window.Reveal.getCurrentSlide();
       observeSlideBoxes(slide);
       queueUpdate(slide);
@@ -323,6 +387,13 @@
     if (document.fonts?.ready) {
       document.fonts.ready.then(() => queueUpdate());
     }
-    window.addEventListener("resize", () => queueUpdate(), { passive: true });
+    window.addEventListener(
+      "resize",
+      () => {
+        updateCanvasScale();
+        queueUpdate();
+      },
+      { passive: true },
+    );
   });
 })();

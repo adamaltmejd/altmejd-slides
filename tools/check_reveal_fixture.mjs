@@ -155,7 +155,14 @@ try {
     const agendaItems = Array.from(agendaList.children);
     const agendaItemStyles = agendaItems.map((item) => getComputedStyle(item));
     const agendaTypography =
-      new Set(agendaItemStyles.map((style) => style.fontWeight)).size === 1 &&
+      Number(getComputedStyle(agendaList.querySelector(".agenda-active")).fontWeight) >
+        Number(
+          getComputedStyle(
+            agendaList.querySelector(".agenda-inactive") ||
+              agendaList.querySelector(".agenda-active"),
+          ).fontWeight,
+        ) -
+          (agendaItems.length === 1 ? 1 : 0) &&
       agendaItemStyles.every((style) => style.opacity === "1") &&
       Number.parseFloat(getComputedStyle(agendaList).rowGap) > 5;
 
@@ -190,9 +197,16 @@ try {
     const panelHeadings = Array.from(panels.children, (panel) => panel.firstElementChild);
     const panelImages = Array.from(panels.querySelectorAll("img"));
     const panelNav = panelSlide.querySelector(".slide-nav");
+    const panelHeadingRects = panelHeadings.map(rect);
+    const panelImageRects = panelImages.map(rect);
+    const panelNavRect = rect(panelNav);
 
     const onePanelSlide = await show("explicit-one-panel-layout");
     const onePanel = onePanelSlide.querySelector(".figure-panels");
+    const onePanelSupported =
+      onePanelSlide.classList.contains("layout-fill") &&
+      onePanel.children.length === 1 &&
+      rect(onePanel.firstElementChild).width > onePanelSlide.clientWidth * 0.8;
 
     const mathSlide = await show("self-contained-mathematics");
     const mathElements = Array.from(mathSlide.querySelectorAll(".katex"));
@@ -227,6 +241,9 @@ try {
     const navFigureRect = rect(navFigure);
     navLinks[1].focus();
     const focusedStyle = getComputedStyle(navLinks[1]);
+    const focusVisible =
+      focusedStyle.outlineStyle !== "none" && Number.parseFloat(focusedStyle.outlineWidth) >= 2;
+    const navRows = new Set(navLinks.map((link) => Math.round(rect(link).top))).size;
 
     const asideSlide = await show("notes-and-aside");
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -294,26 +311,20 @@ try {
       figureAlignmentOverride:
         navFigure.classList.contains("quarto-figure-left") &&
         Math.abs(navFigureRect.left - navSlideRect.left) < 2,
-      focusVisible:
-        focusedStyle.outlineStyle !== "none" && Number.parseFloat(focusedStyle.outlineWidth) >= 2,
+      focusVisible,
       navDisplay: getComputedStyle(navLinks[0]).display,
-      navRows: new Set(navLinks.map((link) => Math.round(rect(link).top))).size,
+      navRows,
       panelDisplay: getComputedStyle(panels).display,
       panelHeadingsAligned:
-        Math.max(...panelHeadings.map((heading) => rect(heading).top)) -
-          Math.min(...panelHeadings.map((heading) => rect(heading).top)) <
+        Math.max(...panelHeadingRects.map((heading) => heading.top)) -
+          Math.min(...panelHeadingRects.map((heading) => heading.top)) <
         2,
-      panelImagesVisible: panelImages.every(
-        (image) => rect(image).width > 100 && rect(image).height > 100,
-      ),
+      panelImagesVisible: panelImageRects.every((image) => image.width > 100 && image.height > 100),
       panelNavReserved:
-        Math.max(...panelImages.map((image) => rect(image).bottom)) <= rect(panelNav).top + 1,
+        Math.max(...panelImageRects.map((image) => image.bottom)) <= panelNavRect.top + 1,
       panelSlideEnriched:
         panelSlide.classList.contains("layout-fill") && panels.classList.contains("figure-panels"),
-      onePanelSupported:
-        onePanelSlide.classList.contains("layout-fill") &&
-        onePanel.children.length === 1 &&
-        rect(onePanel.firstElementChild).width > onePanelSlide.clientWidth * 0.8,
+      onePanelSupported,
       bundledKatex:
         mathElements.length >= 2 &&
         mathSizes.every((math) => math.width > 0 && math.height > 0) &&
@@ -418,8 +429,8 @@ try {
     !layout.mathNavDockUnboxed ||
     layout.mathNavGap <= 0 ||
     layout.mathNavGroupGap < 4 ||
-    layout.mathNavHeight <= 18 ||
-    layout.mathNavHeight >= 32 ||
+    layout.mathNavHeight < 32 ||
+    layout.mathNavHeight > 48 ||
     layout.mathNavPadding < 8 ||
     layout.mathNavRadius <= 3 ||
     layout.mathNavRadius >= 20 ||
@@ -708,8 +719,8 @@ try {
         getComputedStyle(document.querySelector(".reveal")).backgroundColor ===
           getComputedStyle(closing).backgroundColor,
       qrDocked:
-        getComputedStyle(closingQr).position === "absolute" &&
-        Math.abs(rect(closingQr).right - rect(closing).right) < 2,
+        getComputedStyle(closingQr.closest("a.qr-link")).position === "absolute" &&
+        Math.abs(rect(closingQr.closest("a.qr-link")).right - rect(closing).right) < 2,
       qrGenerated:
         closingQr.src.startsWith("data:image/svg+xml;base64,") &&
         closingQr.alt.includes("example.org"),
@@ -894,7 +905,7 @@ try {
       const styles = items.map((item) => getComputedStyle(item));
       return (
         styles.length > 1 &&
-        new Set(styles.map((style) => style.fontWeight)).size === 1 &&
+        Number(styles[0].fontWeight) > Number(styles[1].fontWeight) &&
         styles.every((style) => style.opacity === "1") &&
         styles[0].color !== styles[1].color &&
         Number.parseFloat(getComputedStyle(agenda).rowGap) > 5

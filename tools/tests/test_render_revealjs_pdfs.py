@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,6 +16,7 @@ from tools.render_revealjs_pdfs import (
     RenderError,
     RenderMode,
     Viewport,
+    cache_bypass_reason,
     cache_digest,
     collect_asset_paths,
     configured_modes,
@@ -22,6 +25,7 @@ from tools.render_revealjs_pdfs import (
     extract_reveal_dimensions,
     normalize_query,
     output_path_for,
+    parse_srcset,
     parse_viewport,
     render_viewport,
     resolve_chrome,
@@ -71,6 +75,45 @@ class ViewportTests(unittest.TestCase):
         )
 
 
+class StarterWorkflowTests(unittest.TestCase):
+    def test_make_requires_an_unambiguous_render_input(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            shutil.copy2(Path(__file__).resolve().parents[2] / "Makefile", root / "Makefile")
+            (root / "talk.qmd").write_text("## A slide\n")
+            executable = root / "quarto"
+            executable.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$QUARTO_TEST_LOG"\n')
+            executable.chmod(0o755)
+            log = root / "quarto-arguments"
+            env = {
+                **os.environ,
+                "PATH": f"{root}{os.pathsep}{os.environ.get('PATH', '')}",
+                "QUARTO_TEST_LOG": str(log),
+            }
+
+            def render(*args: str) -> subprocess.CompletedProcess[str]:
+                return subprocess.run(
+                    ["make", "render", *args],
+                    cwd=root,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+
+            self.assertEqual(render().returncode, 0)
+            self.assertEqual(log.read_text().splitlines(), ["render", "talk.qmd"])
+            (root / "other.qmd").write_text("## Another talk\n")
+            log.unlink()
+            self.assertNotEqual(render().returncode, 0)
+            self.assertFalse(log.exists())
+            self.assertEqual(render("DECK_INPUT=other.qmd").returncode, 0)
+            self.assertEqual(log.read_text().splitlines(), ["render", "other.qmd"])
+            (root / "_quarto.yml").write_text("project: {type: default}\n")
+            self.assertEqual(render().returncode, 0)
+            self.assertEqual(log.read_text().splitlines(), ["render", "."])
+
+
 class NamingAndQueryTests(unittest.TestCase):
     def test_name_template_is_a_pdf_basename(self) -> None:
         validate_name_template("{stem}-{mode}.pdf")
@@ -112,6 +155,12 @@ class NamingAndQueryTests(unittest.TestCase):
 
 
 class AssetAndCacheTests(unittest.TestCase):
+    def test_srcset_ignores_empty_candidates(self) -> None:
+        self.assertEqual(
+            parse_srcset(", plot.svg 1x, , plot-2x.svg 2x, "), ["plot.svg", "plot-2x.svg"]
+        )
+        self.assertEqual(parse_srcset(" , "), [])
+
     def test_collects_html_direct_css_and_quarto_directory_assets(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             site = Path(temporary).resolve()
@@ -152,6 +201,87 @@ class AssetAndCacheTests(unittest.TestCase):
             '/* @import "legacy.css"\n   url(multi-line.woff2) */\n'
         )
         self.assertEqual(css_references(css), ["kept.png"])
+
+    def test_iframe_and_svg_dependencies_change_cache_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            site = Path(temporary).resolve()
+            html = site / "talk.html"
+            html.write_text(reveal_html(body='<iframe src="figure.html"></iframe>'))
+            (site / "figure.html").write_text(
+                '<img src="plot.svg"><link rel="stylesheet" href="plot.css">'
+            )
+            (site / "plot.css").write_text("body { background: url(background.svg); }")
+            (site / "background.svg").write_text("<svg/>")
+            (site / "plot.svg").write_text('<svg><use href="marks.svg#marker"/></svg>')
+            marks = site / "marks.svg"
+            marks.write_text('<svg><text id="marker">Original result</text></svg>')
+            assets = collect_asset_paths(html, site)
+            self.assertEqual(
+                {path.name for path in assets},
+                {"talk.html", "figure.html", "plot.svg", "marks.svg", "plot.css", "background.svg"},
+            )
+            self.assertIsNone(cache_bypass_reason(html, site))
+
+            def digest() -> str:
+                return cache_digest(
+                    assets=assets,
+                    site_dir=site,
+                    mode=RenderMode("presentation", "pdf=slides", "{stem}.pdf"),
+                    viewport=Viewport(2100, 1400),
+                    renderer=RendererInfo(Path("/decktape"), "3.16.1", "lock"),
+                    pause_ms=250,
+                    load_pause_ms=1000,
+                    no_sandbox=False,
+                    chrome_fingerprint=None,
+                    pipeline_source_hash="source",
+                )
+
+            initial = digest()
+            marks.write_text('<svg><text id="marker">Revised result</text></svg>')
+            self.assertNotEqual(initial, digest())
+
+    def test_nested_external_or_missing_resources_fail_preflight(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            site = Path(temporary).resolve()
+            html = site / "talk.html"
+            html.write_text(reveal_html(body='<iframe src="figure.html"></iframe>'))
+            for reference, error in (
+                ("https://example.com/plot.svg", "blocked external resource"),
+                ("missing.svg", "missing local resource"),
+            ):
+                with self.subTest(reference=reference):
+                    (site / "figure.html").write_text(f'<img src="{reference}">')
+                    with self.assertRaisesRegex(RenderError, error):
+                        collect_asset_paths(html, site)
+
+    def test_unknown_script_dependencies_bypass_cache(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            site = Path(temporary).resolve()
+            html = site / "talk.html"
+            for filename, content in (
+                ("figure.html", '<script>fetch("unlisted-result.json")</script>'),
+                ("figure.svg", '<svg><script>fetch("unlisted-result.json")</script></svg>'),
+                ("figure.mjs", 'import("./unlisted-result.js")'),
+            ):
+                with self.subTest(filename=filename):
+                    html.write_text(reveal_html(body=f'<iframe src="{filename}"></iframe>'))
+                    (site / filename).write_text(content)
+                    collect_asset_paths(html, site)
+                    self.assertIsNotNone(cache_bypass_reason(html, site))
+
+    def test_bundled_dependencies_remain_cacheable_and_fully_hashed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            site = Path(temporary).resolve()
+            html = site / "talk.html"
+            html.write_text(reveal_html('<script src="site_libs/reveal.js"></script>'))
+            libraries = site / "site_libs"
+            libraries.mkdir()
+            (libraries / "reveal.js").write_text("// bundled runtime")
+            (libraries / "support.json").write_text("{}")
+            (libraries / "speaker-view.html").write_text("<script>// separate window</script>")
+            assets = collect_asset_paths(html, site)
+            self.assertIn(libraries / "support.json", assets)
+            self.assertIsNone(cache_bypass_reason(html, site))
 
     def test_external_fetchable_resource_fails_but_link_is_allowed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -227,11 +357,9 @@ class RendererResolutionTests(unittest.TestCase):
         ):
             resolve_chrome(None)
 
-    def test_resolves_exact_root_pin_and_hashes_lock(self) -> None:
+    def test_resolves_exact_renderer_pin_and_hashes_lock(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
-            tools_dir = root / "tools"
-            tools_dir.mkdir()
             (root / "package.json").write_text(
                 '{"devDependencies":{"decktape":"3.16.1"}}', encoding="utf-8"
             )
@@ -244,7 +372,7 @@ class RendererResolutionTests(unittest.TestCase):
             installed.parent.mkdir(parents=True)
             installed.write_text('{"version":"3.16.1"}', encoding="utf-8")
 
-            renderer = resolve_renderer(tools_dir, None)
+            renderer = resolve_renderer(root, None)
             self.assertEqual(renderer.executable, executable)
             self.assertEqual(renderer.version, "3.16.1")
             self.assertEqual(len(renderer.dependency_lock_hash), 64)
@@ -252,8 +380,6 @@ class RendererResolutionTests(unittest.TestCase):
     def test_rejects_installed_version_drift(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
-            tools_dir = root / "tools"
-            tools_dir.mkdir()
             (root / "package.json").write_text(
                 '{"devDependencies":{"decktape":"3.16.1"}}', encoding="utf-8"
             )
@@ -267,7 +393,7 @@ class RendererResolutionTests(unittest.TestCase):
             installed.write_text('{"version":"3.15.0"}', encoding="utf-8")
 
             with self.assertRaisesRegex(RenderError, "does not match"):
-                resolve_renderer(tools_dir, None)
+                resolve_renderer(root, None)
 
 
 if __name__ == "__main__":
