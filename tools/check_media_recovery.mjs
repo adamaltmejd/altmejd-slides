@@ -117,12 +117,15 @@ try {
   });
   await reducedPage.waitForFunction(() => globalThis.Reveal?.isReady());
   const reduced = await reducedPage.evaluate(async () => {
+    const img = globalThis.Reveal.getCurrentSlide().querySelector(":scope > img");
+    await Promise.all([document.fonts.ready, img.decode()]);
     await new Promise((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))),
     );
-    const img = globalThis.Reveal.getCurrentSlide().querySelector(":scope > img");
     const style = getComputedStyle(img);
     return {
+      complete: img.complete,
+      natural: img.naturalWidth,
       matches: matchMedia("(prefers-reduced-motion: reduce)").matches,
       height: Math.round(img.getBoundingClientRect().height),
       transition: `${style.transitionProperty} ${style.transitionDuration}`,
