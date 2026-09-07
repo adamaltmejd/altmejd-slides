@@ -7,7 +7,8 @@ for the choices that should vary between decks.
 
 Quarto and Pandoc remain responsible for document processing and slide
 construction. The extension adds the theme, automatic section agendas,
-speaker-note handouts, and a pinned copy of
+speaker-note handouts, a document reading view, an optional slide check, and a
+pinned copy of
 [`quarto-slide-remote`](https://github.com/adamaltmejd/quarto-slide-remote).
 
 ## Start a deck
@@ -28,10 +29,13 @@ quarto update adamaltmejd/altmejd-slides
 Pin a deck to a released extension when reproducibility matters:
 
 ```sh
-quarto add adamaltmejd/altmejd-slides@v0.7.2
+quarto add adamaltmejd/altmejd-slides@v0.7.3
 ```
 
-The complete copyable front matter lives in [`template.qmd`](template.qmd).
+The lean starter lives in [`template.qmd`](template.qmd). Its defaults are
+ready to use; the [authoring guide](docs/authoring.md) contains recipes and
+optional settings. Existing decks installed with `quarto add` can copy the
+starter's [Makefile](Makefile) for the workflow commands below.
 
 ## Preview
 
@@ -77,6 +81,7 @@ altmejd-slides:
     heading: false # false by default, or any text
     bullets: none # none by default; bullet and numbered are available
     clickable: false
+    include-appendix: false
 ```
 
 Valid color overrides are emitted as CSS custom properties after the compiled
@@ -89,158 +94,44 @@ the start of backup material: every slide from there on is excluded from the
 slide counter, so the total reflects the talk and the number freezes while
 presenting appendix slides. The slides themselves remain fully navigable and
 appear in PDFs; an explicit `visibility` attribute on a slide still wins.
+Appendix sections are omitted from the main agenda by default. Set
+`agenda.include-appendix: true` to include them. The current section has a
+visual marker and an accessible `aria-current` state.
 
 Keep native Reveal and Quarto settings—such as footer, logo, dimensions,
 transition, and slide numbers—under the format rather than duplicating them in
 `altmejd-slides`.
 
-## Research-slide primitives
+## Authoring and reading
 
-Standalone figures are centered by default. Use `fig-align="left"` or
-`fig-align="right"` on an individual image when its alignment should differ;
-`.r-stretch` controls sizing independently and is not needed for centering.
+Use a heading that states the evidence, a legible figure or table, and a short
+qualification. The extension provides figures and panels, statement slides,
+statistic rows, callouts, source notes, navigation, and closing slides. Copy
+complete recipes from the [authoring guide](docs/authoring.md); the
+[design guide](docs/design.md) explains the palette and typography.
 
-Standard Markdown figure captions are supported without a panel wrapper:
+Figures remain centered by default. `.nostretch` preserves deliberate sizing,
+and `.no-figure-panels` keeps native columns when the automatic equal-panel
+layout is inappropriate. Separate navigation groups share one dock without
+losing their `.handout-only` or `.live-only` gates. Generated QR codes remain
+clickable links as well as scannable images.
+Mode gates control display; hidden content remains in the delivered HTML.
 
-```markdown
-![Example applicant with score = 8](applicant.svg){fig-alt="Description of the diagram"}
-```
+Open `talk.html?reading=true` to read the final slide content as a flowing
+document. Add `&handout=true` to include speaker notes. **Read slides** is also
+available in the slide menu and on narrow screens; **Present slides** returns
+to the presentation. The reading view includes a browser print option.
 
-Captions sit below the image in smaller, muted text and are centered by default.
-An explicit `fig-align="left"` or `fig-align="right"` also aligns the caption.
-Use `fig-alt` for an accessibility description separate from the visible caption.
+Before presenting, open `talk.html?check=true`. The optional local report
+finds slide overflow, clipped code or notes, missing image alt attributes,
+broken images, and broken internal links. Use `?handout=true&check=true` to
+check the handout too. It checks these specific conditions; visual review and
+judgment about content and accessibility still matter.
 
-Ordinary two-column slides are automatically upgraded to fill-height figure
-panels when both columns contain an image. A short panel label, the image, and
-an optional internal-link row are enough:
-
-```markdown
-:::: {.columns}
-::: {.column width="50%"}
-**Women**
-
-![](women.svg)
-:::
-::: {.column width="50%"}
-**Men**
-
-![](men.svg)
-:::
-::::
-
-[Number of children](#number-of-children)
-```
-
-Use `.figure-panels` explicitly for a one-panel layout or to make the intent
-clear. Its direct children may be ordinary `.column` elements or
-`.figure-panel` elements. Images preserve their aspect ratio, panel headings
-align, and the filter reserves the bottom link row.
-
-Use `.slide-nav` for compact internal navigation. Add `.back` to a return link
-or `.primary` only when an action genuinely needs emphasis. The quiet action row
-is fixed to the bottom-right footer line, after visible asides and handout notes,
-and wraps when needed:
-
-```markdown
-::: {.slide-nav}
-[Main result](#main-result){.back}
-[Women](#women)
-[Men](#men)
-[Robustness](#robustness)
-:::
-```
-
-A statement slide carries one takeaway. Add `.statement` to the slide heading
-and it becomes a quiet uppercase kicker above the payload — a short bold
-sentence, a `.stat-row`, or both. A `.stat-row` holds one to three
-number-plus-label pairs; each pair is one paragraph with the `.stat` span
-first, and wrapping the number in `**strong**` gives it the accent ink. The
-row also works at a smaller scale on ordinary slides:
-
-```markdown
-## The headline result {.statement}
-
-::: {.stat-row}
-[**+0.18**]{.stat} courses completed per term at the threshold
-:::
-```
-
-Quarto's native callouts are the semantic box family, restyled to the palette
-with their icons removed: `.callout-note` for definitions, `.callout-tip` for
-results, `.callout-important` for identifying assumptions, and
-`.callout-warning` or `.callout-caution` for caveats. Callouts keep a solid
-light surface on `.dark-bg` slides.
-
-Figure build-ups use Reveal's `.r-stack` with `.fragment` layers. Export
-layers that share the same base image so each fragment reads as adding to the
-plot; both PDF variants keep only the final state:
-
-```markdown
-::: {.r-stack}
-![](points.svg)
-
-![](points-plus-fit.svg){.fragment}
-:::
-```
-
-A full-bleed slide puts one image behind the whole canvas. The heading and an
-optional caption paragraph sit on fixed scrim chips, the attribution becomes a
-bottom-right credit chip, and the footer and slide number yield:
-
-```markdown
-## The space itself {.full-bleed background-image="scene.jpg" background-size="cover"}
-
-One caption line.
-
-::: {.attribution}
-Image credit
-:::
-```
-
-A closing slide bookends the cover on the divider surface. `.closing-slide`
-reuses the title rule, enlarges the heading, and anchors the contact
-paragraphs at the bottom above the same hairline the author grid uses. A
-`{.qr}` link renders as a scannable QR code docked top-right — generated at
-render time by a vendored offline encoder, with the link text as alt text:
-
-```markdown
-## Thank you {.closing-slide}
-
-name\@university.edu · [example.org](https://example.org)
-
-[QR code for the paper](https://example.org/paper){.qr}
-```
-
-Content can be gated to one delivery mode: `.handout-only` blocks appear only
-under `?handout=true` and in the handout PDF, while `.live-only` blocks
-disappear there. Tables set tabular figures for aligned columns; a
-`.table-note` div directly under a table renders a quiet source note spanning
-exactly the table's width (long notes under wide tables left-align instead of
-wrapping into a centered stack), and an
-`[0.18]{.emph}` span puts a quiet accent chip on the key value in a table or
-sentence.
-
-The palette's usage rules — which colors mean emphasis, structure, and data —
-are recorded in [`docs/design.md`](docs/design.md).
-
-Any content immediately below a level-one section heading becomes its agenda
-kicker. For explicit markup, wrap the content in `.section-kicker`. Visible
-direct-child asides reserve their measured height in live slides and handouts;
-speaker notes add a second reserved box only in `?handout=true` mode.
-
-Title slides remain simple for one or two authors. Four authors use one compact
-row; five or six use two rows. Each author's affiliations are comma-separated
-in the same cell.
-
-The format bundles its typefaces: Schibsted Grotesk for headings and text and
-JetBrains Mono for code and slide numbers, both vendored as variable WOFF2
-files under the SIL Open Font License. Decks therefore typeset identically on
-every machine — including CI-rendered PDFs — without a font CDN.
-
-The format bundles and defaults to KaTeX 0.18.4 for fast, consistent TeX
-typography without a runtime CDN dependency. Set `altmejd-slides.math: false`
-and choose a native Quarto `html-math-method` only when a different renderer is
-deliberately required.
+The format bundles Schibsted Grotesk, JetBrains Mono, and KaTeX 0.18.4. Text and
+math therefore need no font or renderer CDN. To select a different math
+renderer, set `altmejd-slides.math: false` and choose Quarto's
+`html-math-method`.
 
 ## Slide Remote
 
@@ -255,32 +146,36 @@ slide-remote:
 ```
 
 The theme preserves direct-child headings, `aside.notes`, fragments, and the
-normal Reveal plugin API. The PDF queries keep the remote silent during
-capture.
+normal Reveal plugin API. PDF, handout, reading, and check modes keep the
+remote silent. The extension adds `reading` and `check` to the disabled
+parameters while preserving any custom entries.
 
 ## HTML and PDFs
 
-Install the locked development tools and render the showcase:
+A starter deck supports these commands:
 
 ```sh
-bun install --frozen-lockfile
-bun run render:examples
-bun run pdf:examples
+make preview
+make pdf-setup   # one-time installation of the locked capture tools
+make pdf         # render and capture the deck
 ```
 
-Each deck produces two artifacts:
+PDF setup requires Bun; capture requires an installed Chrome or Chromium.
+After setup, capture uses the pinned local DeckTape and stays offline.
+It does not install packages or download a browser. For a project that renders
+to `_site`, run `make pdf PDF_SITE_DIR=_site`.
 
-- `NAME-slides.pdf`: final-state slides without speaker notes;
-- `NAME-handout.pdf`: the same slides with speaker notes visible.
-
-The renderer captures normal Reveal mode with pinned DeckTape rather than
-Reveal's browser print layout. It derives the viewport from the deck,
+Each deck produces `NAME-slides.pdf` without speaker notes and
+`NAME-handout.pdf` with notes. Both retain the final fragment state. The
+renderer captures normal Reveal mode, derives the viewport from the deck,
 preflights local assets, blocks network access, writes atomically, and caches
-the two modes independently. See [`tools/README.md`](tools/README.md).
+the two modes independently. See the [PDF tool guide](tools/README.md) for
+output options and capture of already-rendered HTML.
 
 ## Development
 
 ```sh
+bun install --frozen-lockfile
 bun run check
 bun run render:examples
 ```
@@ -293,8 +188,10 @@ browser check visits every slide in desktop, narrow, and handout modes.
 
 [`tests/fixtures/regression.qmd`](tests/fixtures/regression.qmd) keeps only
 adversarial limits such as unusually long metadata, navigation, and code. The
-agenda fixtures cover deck-wide variants and an eleven-section research-talk
-outline. The supported baseline is the Quarto version pinned in CI; a large
+authoring fixture checks combinations such as gated navigation, fixed-size
+figures with notes, and clickable QR codes. The agenda fixtures cover deck-wide
+variants and an eleven-section outline with appendix inclusion enabled. The
+supported baseline is the Quarto version pinned in CI; a large
 consumer deck is an occasional release soak test, not the routine design fixture.
 
 The architecture and public boundaries are recorded in

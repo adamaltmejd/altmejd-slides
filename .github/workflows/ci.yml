@@ -71,6 +71,9 @@ jobs:
           test -n "$chrome_path"
           CHROME_PATH="$chrome_path" bun run test:browser
 
+      - name: Install pinned PDF exporter
+        run: make pdf-setup
+
       - name: Render PDF regression pair
         run: |
           chrome_path="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
@@ -144,7 +147,7 @@ jobs:
 
   deploy-pages:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: validate
+    needs: [validate, windows-edge]
     permissions:
       contents: read
       pages: write

@@ -101,6 +101,8 @@ altmejd-slides:
 
 ![](assets/dot.svg)
 
+![](./portrait.svg)
+
 ## Two
 
 Content.
@@ -108,6 +110,8 @@ QMD
 cat >"$deck_dir/assets/dot.svg" <<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><circle cx="4" cy="4" r="4"/></svg>
 SVG
+cp "$deck_dir/assets/dot.svg" "$deck_dir/portrait.svg"
+printf '%%PDF-1.4 private handout marker\n' >"$deck_dir/private-handout.pdf"
 
 cd "$deck_dir"
 staging="$work_dir/staging"
@@ -131,6 +135,22 @@ quarto run "$publisher" --no-verify --keep-staging --staging-dir "$staging" ||
 
 test -f "$staging/public/fixture26/index.html" || fail "entry not staged as <slug>/index.html"
 test -f "$staging/public/fixture26/assets/dot.svg" || fail "referenced asset not staged"
+test -f "$staging/public/fixture26/portrait.svg" || fail "dot-prefixed asset not staged"
+test ! -f "$staging/public/fixture26/private-handout.pdf" || fail "unconfigured handout was staged"
+test ! -f "$staging/public/fixture26/mytalk.qmd" || fail "QMD source was staged"
+python3 - "$staging" <<'PY' || fail "staging manifest does not describe the public files"
+import json, pathlib, sys
+stage = pathlib.Path(sys.argv[1])
+manifest = json.loads((stage / "staged-files.json").read_text())
+entries = {entry["path"]: entry for entry in manifest["files"]}
+actual = {str(p.relative_to(stage / "public")) for p in (stage / "public").rglob("*") if p.is_file()}
+assert set(entries) == actual, (set(entries), actual)
+assert entries["fixture26/index.html"]["kind"] == "entry"
+assert entries["fixture26/portrait.svg"]["source"] == "portrait.svg"
+assert all(entries[p]["bytes"] == (stage / "public" / p).stat().st_size for p in actual)
+assert not any("handout" in p or p.endswith(".qmd") for p in entries)
+assert not (stage / "public/staged-files.json").exists()
+PY
 test -d "$staging/public/fixture26/mytalk_files" || fail "Quarto dependency tree not staged"
 test -f "$staging/public/_headers" || fail "_headers not staged at the asset root"
 if ! grep -q "stale-while-revalidate" "$staging/public/_headers"; then
@@ -305,16 +325,64 @@ test -f "$outdir_proj/staging/public/outdir26/fig-web/dot.svg" ||
   fail "output-dir project asset directory not staged"
 test -f "$outdir_proj/staging/public/outdir26/slides.pdf" ||
   fail "configured artifact not staged at its target"
+python3 - "$outdir_proj/staging/staged-files.json" <<'PY' || fail "artifact origin missing from manifest"
+import json, sys
+entries = {e["path"]: e for e in json.load(open(sys.argv[1]))["files"]}
+assert entries["outdir26/slides.pdf"]["kind"] == "artifact:presentation-pdf"
+assert entries["outdir26/slides.pdf"]["source"] == "slides-src.pdf"
+PY
+
+# Nested input paths keep their assets and shared libraries inside the slug.
+nested_proj="$work_dir/nested-proj"
+mkdir -p "$nested_proj/talks/assets"
+printf 'project:\n  type: default\n  output-dir: _site\n  lib-dir: site_libs\n' >"$nested_proj/_quarto.yml"
+cat >"$nested_proj/talks/talk.qmd" <<'QMD'
+---
+title: "Nested Fixture"
+format:
+  revealjs:
+    css: custom.css
+---
+
+## One
+
+![](./assets/dot.svg)
+
+## Two
+
+[First slide](talk.html#/one)
+QMD
+cp "$deck_dir/assets/dot.svg" "$nested_proj/talks/assets/dot.svg"
+printf '@import "../shared.css";\n' >"$nested_proj/talks/custom.css"
+printf '.reveal { color: #123456; }\n' >"$nested_proj/shared.css"
+# Force an unrelated output marker to coexist with the nested rendered deck.
+mkdir -p "$nested_proj/_site/talks"
+printf '%%PDF-1.4 private handout marker\n' >"$nested_proj/_site/talks/private-handout.pdf"
+: >"$FAKE_WRANGLER_LOG"
+(cd "$nested_proj" &&
+  quarto run "$publisher" --input talks/talk.qmd --slug nested26 --stage-only \
+    --staging-dir "$nested_proj/staging") || fail "nested project staging failed"
+nested_public="$nested_proj/staging/public/nested26"
+test -d "$nested_public/site_libs/revealjs" || fail "nested shared libraries not staged"
+test -f "$nested_public/talks/assets/dot.svg" || fail "nested figure not staged"
+test -f "$nested_public/shared.css" || fail "nested CSS import not staged"
+test -f "$nested_proj/_site/talks/private-handout.pdf" || fail "nested private marker was removed before staging"
+test ! -f "$nested_public/talks/private-handout.pdf" || fail "nested output parent copied wholesale"
+grep -q 'href="index.html#/one"' "$nested_public/index.html" || fail "self link not rebased"
+grep -q 'src="site_libs/revealjs/' "$nested_public/index.html" || fail "shared library URL not rebased"
+grep -q 'data-src="talks/assets/dot.svg"' "$nested_public/index.html" || fail "figure URL not rebased"
+test ! -s "$FAKE_WRANGLER_LOG" || fail "stage-only contacted Wrangler"
 
 # A configured artifact whose source is missing must fail loudly.
 rm "$outdir_proj/slides-src.pdf"
 if (cd "$outdir_proj" &&
-  quarto run "$publisher" --stage-only --staging-dir "$outdir_proj/staging2") \
+  quarto run "$publisher" --stage-only --staging-dir "$outdir_proj/staging") \
   >"$work_dir/artifact-missing.log" 2>&1; then
   fail "missing artifact source did not fail the publish"
 fi
 grep -q 'artifact "presentation-pdf" source does not exist' "$work_dir/artifact-missing.log" ||
   fail "missing-artifact failure lacked a clear message"
+test ! -f "$outdir_proj/staging/staged-files.json" || fail "failed staging kept a stale manifest"
 
 # --- deploy succeeds, verification fails, retry recovers without --adopt ----
 verify_deck="$work_dir/verify-deck"

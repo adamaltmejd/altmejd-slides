@@ -1,0 +1,361 @@
+/* biome-ignore-all lint/complexity/noImportantStyles: The reader overrides Reveal and author inline sizing when converting the fixed canvas to document flow. */
+.altmejd-read-link,
+.altmejd-mobile-nav,
+.altmejd-reader,
+.altmejd-preflight {
+  font-family: "Schibsted Grotesk", system-ui, sans-serif;
+  color: var(--altmejd-foreground);
+  background: var(--altmejd-background);
+}
+
+.altmejd-read-link,
+.altmejd-mobile-nav {
+  display: none;
+}
+
+.altmejd-reader-toolbar a,
+.altmejd-reader-toolbar button,
+.altmejd-read-link,
+.altmejd-mobile-nav a,
+.altmejd-preflight button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 0.4em 0.8em;
+  font:
+    560 16px "Schibsted Grotesk",
+    system-ui,
+    sans-serif;
+  color: var(--altmejd-primary);
+  background: var(--altmejd-background);
+  border: 1px solid var(--altmejd-border);
+  border-radius: 5px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.altmejd-read-link {
+  display: none;
+}
+.altmejd-mobile-nav a.back::before {
+  content: "←";
+  margin-right: 0.4em;
+}
+.altmejd-mobile-nav a.primary {
+  color: var(--altmejd-background);
+  background: var(--altmejd-primary);
+}
+.altmejd-reader a {
+  color: var(--altmejd-primary);
+  text-underline-offset: 0.15em;
+}
+.altmejd-reader :is(a, button):focus-visible,
+.altmejd-read-link:focus-visible,
+.altmejd-mobile-nav a:focus-visible,
+.altmejd-preflight :is(a, button):focus-visible {
+  outline: 3px solid var(--altmejd-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .altmejd-read-link {
+    position: fixed;
+    display: inline-flex;
+    top: 8px;
+    right: 8px;
+    z-index: 30;
+  }
+  .altmejd-mobile-nav:not([hidden]) {
+    position: fixed;
+    display: flex;
+    gap: 8px;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    padding: 8px;
+    overflow-x: auto;
+    border-top: 1px solid var(--altmejd-border);
+  }
+  .altmejd-mobile-nav a {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+
+html.altmejd-reading,
+html.altmejd-reading body {
+  height: auto !important;
+  min-height: 100%;
+  overflow: auto !important;
+  margin: 0;
+  background: var(--altmejd-background);
+}
+
+.altmejd-reader {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 1rem clamp(1rem, 4vw, 2.5rem) 4rem;
+  font-size: 18px;
+  line-height: 1.55;
+  overflow-wrap: break-word;
+}
+.altmejd-reader *,
+.altmejd-reader *::before,
+.altmejd-reader *::after {
+  box-sizing: border-box;
+}
+.altmejd-reader-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.altmejd-reader > section {
+  margin: 0;
+  padding: 1.5rem 0 2rem;
+  border-bottom: 1px solid var(--altmejd-border);
+  scroll-margin-top: 1rem;
+}
+.altmejd-reader :is(h1, h2, h3) {
+  color: var(--altmejd-foreground);
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+.altmejd-reader h1 {
+  font-size: 2rem;
+}
+.altmejd-reader h2 {
+  font-size: 1.5rem;
+  margin: 0 0 1rem;
+}
+.altmejd-reader h3 {
+  font-size: 1.15rem;
+}
+.altmejd-reader p {
+  margin: 0.65em 0;
+}
+.altmejd-reader :is(ul, ol) {
+  margin: 0.65em 0;
+  padding-left: 1.4em;
+}
+.altmejd-reader li {
+  margin: 0.3em 0;
+}
+.altmejd-reader :is(img, video, iframe) {
+  display: block;
+  max-width: 100%;
+  margin: 1rem auto;
+}
+.altmejd-reader img {
+  height: auto !important;
+  max-height: none !important;
+}
+.altmejd-reader :is(video, iframe).altmejd-reading-background {
+  aspect-ratio: 16 / 9;
+  height: auto;
+}
+.altmejd-reader .altmejd-reading-background {
+  width: 100%;
+}
+.altmejd-reader .qr-link {
+  display: inline-block;
+}
+.altmejd-reader .qr {
+  width: 10rem;
+}
+.altmejd-reader :is(figure, .quarto-figure) {
+  margin: 1rem 0;
+}
+.altmejd-reader :is(figcaption, .caption, .attribution, .table-note) {
+  font-size: 1rem;
+  line-height: 1.4;
+  color: var(--altmejd-muted);
+}
+.altmejd-reader .attribution {
+  margin-top: 1rem;
+}
+.altmejd-reader blockquote,
+.altmejd-reader .callout,
+.altmejd-reader :is(.aside, .altmejd-aside, aside) {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  background: var(--altmejd-surface);
+  border-left: 3px solid var(--altmejd-primary);
+}
+.altmejd-reader .callout-icon {
+  display: none;
+}
+.altmejd-reader .callout-title-container {
+  font-weight: 650;
+}
+.altmejd-reader :is(.aside, .altmejd-aside, aside) {
+  font-size: 1rem;
+}
+.altmejd-reader .columns,
+.altmejd-reader .figure-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.altmejd-reader :is(.column, .figure-panel) {
+  width: auto !important;
+  min-width: 0;
+}
+.altmejd-reader .figure-panel:only-child {
+  grid-column: 1 / -1;
+}
+.altmejd-reader .stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+}
+.altmejd-reader .stat-row > p {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 8rem;
+  font-size: 1rem;
+}
+.altmejd-reader .stat {
+  font-size: 2.5rem;
+  font-weight: 740;
+  line-height: 1.1;
+}
+.altmejd-reader strong {
+  color: color-mix(in srgb, var(--altmejd-accent) 65%, var(--altmejd-foreground));
+}
+.altmejd-reader .emph {
+  font-weight: 650;
+  background: color-mix(in srgb, var(--altmejd-accent) 14%, transparent);
+}
+.altmejd-reader .agenda,
+.altmejd-reader .agenda-heading {
+  display: none;
+}
+.altmejd-reader .section-kicker {
+  color: var(--altmejd-muted);
+  font-size: 1rem;
+}
+.altmejd-reader table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.altmejd-reader :is(th, td) {
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--altmejd-border);
+}
+.altmejd-reader pre {
+  max-height: none;
+  overflow-x: auto;
+  padding: 1rem;
+  background: var(--altmejd-code-background);
+}
+.altmejd-reader code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.85em;
+}
+.altmejd-reader pre code {
+  white-space: pre;
+}
+.altmejd-reader .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.4rem 0;
+}
+.altmejd-reader .slide-nav,
+.altmejd-reader .slide-nav-group,
+.altmejd-reader .slide-nav p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+.altmejd-reader .slide-nav a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.altmejd-reader #title-slide {
+  display: block !important;
+  height: auto;
+  padding: 1rem 0 2rem;
+}
+.altmejd-reader #title-slide::before {
+  content: none;
+}
+.altmejd-reader #title-slide .title {
+  max-width: none;
+  font-size: 2.6rem;
+  line-height: 1.08;
+}
+.altmejd-reader #title-slide .subtitle {
+  font-size: 1rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.altmejd-reader #title-slide .quarto-title-authors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  width: 100% !important;
+  margin-top: 1.5rem;
+  font-size: 1rem !important;
+}
+.altmejd-reader #title-slide :is(.quarto-title-author-name, .quarto-title-affiliation, .date) {
+  font-size: 1rem;
+}
+
+.altmejd-preflight {
+  max-width: min(44rem, 90vw);
+  max-height: 85vh;
+  overflow: auto;
+  padding: 1.5rem;
+  border: 1px solid var(--altmejd-border);
+  border-radius: 8px;
+  font-size: 18px;
+  line-height: 1.5;
+}
+.altmejd-preflight::backdrop {
+  background: #0f172a88;
+}
+.altmejd-preflight h2 {
+  margin-top: 0;
+}
+.altmejd-preflight a {
+  color: var(--altmejd-primary);
+}
+
+@media (max-width: 700px) {
+  .altmejd-reader .columns,
+  .altmejd-reader .figure-panels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .altmejd-reader #title-slide .quarto-title-authors {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+@media print {
+  .altmejd-reader-toolbar,
+  .altmejd-read-link,
+  .altmejd-mobile-nav {
+    display: none !important;
+  }
+  .altmejd-reader {
+    max-width: none;
+    padding: 0;
+    font-size: 12pt;
+  }
+  .altmejd-reader > section {
+    break-inside: avoid;
+  }
+  .altmejd-reader :is(h1, h2, h3) {
+    break-after: avoid;
+  }
+  .altmejd-reader :is(table, pre, .katex-display) {
+    overflow: visible;
+  }
+}

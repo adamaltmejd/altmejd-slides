@@ -500,6 +500,7 @@ $code-bg: $altmejd-code-bg !default;
 
 .reveal .slide-number {
   font-family: $font-family-monospace;
+  font-size: calc(0.42em * var(--altmejd-chrome-scale, 1));
 }
 
 // Quarto's footer stylesheet and background classes are applied after the
@@ -507,19 +508,24 @@ $code-bg: $altmejd-code-bg !default;
 // stay live. Slides with genuinely dark backgrounds keep Quarto's white.
 .reveal .slide-number:not(.has-dark-background) {
   color: var(--altmejd-muted);
-  font-size: 0.42em;
+  font-size: calc(0.42em * var(--altmejd-chrome-scale, 1));
 }
 
 // The footer is quiet bottom-left chrome, mirroring the slide number's
 // corner. The paddings clear the menu button and the slide number.
 .reveal .footer.footer {
   box-sizing: border-box;
-  padding-right: 96px;
-  padding-left: 54px;
+  padding-right: calc(96px * var(--altmejd-chrome-scale, 1));
+  padding-left: calc(54px * var(--altmejd-chrome-scale, 1));
   overflow: hidden;
-  font-size: 0.34em;
+  font-size: calc(0.34em * var(--altmejd-chrome-scale, 1));
   white-space: nowrap;
   text-align: left;
+  text-overflow: ellipsis;
+}
+
+.reveal .footer.footer p {
+  overflow: hidden;
   text-overflow: ellipsis;
 }
 
@@ -693,6 +699,36 @@ $code-bg: $altmejd-code-bg !default;
   color: var(--altmejd-background);
 }
 
+.reveal .slides section.dark-bg :is(.stat-row > p, .table-note, .attribution, figcaption, .caption) {
+  color: #cbd5e1;
+}
+
+.reveal .slides section.dark-bg .stat-row .stat,
+.reveal .slides section.dark-bg .figure-panels > :is(.column, .figure-panel) > :first-child:not(:has(img)) {
+  color: #fff;
+}
+
+.reveal .slides section.dark-bg strong,
+.reveal .slides section.dark-bg .emph {
+  color: color-mix(in srgb, var(--altmejd-accent) 50%, #fff);
+}
+
+.reveal .slides section.dark-bg li::marker {
+  color: var(--altmejd-secondary);
+}
+
+.reveal .slides section.dark-bg blockquote {
+  background: var(--altmejd-surface);
+}
+
+.reveal .slides section.dark-bg blockquote a {
+  color: var(--altmejd-primary);
+}
+
+.reveal .slides section.dark-bg :is(blockquote, .callout, .aside, .altmejd-aside, aside) strong {
+  color: color-mix(in srgb, var(--altmejd-accent) 65%, var(--altmejd-foreground));
+}
+
 // A statement slide carries one takeaway: a sentence or a `.stat-row`. The
 // heading becomes a quiet kicker and the rule is suppressed so the statement
 // itself is the loudest element on the slide.
@@ -847,10 +883,9 @@ $code-bg: $altmejd-code-bg !default;
 }
 
 // An optional uncaptioned `.qr .nostretch` image sits top-right across from
-// the heading. The image itself is positioned, because Quarto may unwrap a
-// lone image into a direct section child; a surviving wrapper paragraph is
-// neutralized so it can never become the contact strip.
-.reveal .slides section.closing-slide img.qr {
+// the heading. The clickable tile (or a standalone image) is positioned;
+// a surviving wrapper paragraph cannot become the contact strip.
+.reveal .slides section.closing-slide :is(img.qr, a.qr-link) {
   position: absolute;
   top: calc(
     #{($altmejd-heading-scale * $altmejd-heading-line-height) +
@@ -866,7 +901,15 @@ $code-bg: $altmejd-code-bg !default;
   border-radius: $altmejd-radius;
 }
 
-.reveal .slides section.closing-slide > p:has(> img.qr) {
+.reveal .slides section.closing-slide a.qr-link > img.qr {
+  position: static;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.reveal .slides section.closing-slide > p:has(> img.qr, > a.qr-link) {
   margin: 0;
   padding: 0;
   border: none;
@@ -1059,9 +1102,19 @@ $code-bg: $altmejd-code-bg !default;
 }
 
 .reveal .agenda-active {
+  position: relative;
   color: #fff;
-  font-weight: 560;
+  font-weight: 740;
   opacity: 1;
+}
+
+.reveal .agenda-active::before {
+  content: "";
+  position: absolute;
+  left: -0.55em;
+  top: 0.25em;
+  height: 0.75em;
+  border-left: 3px solid currentColor;
 }
 
 // Compact, explicit navigation for back links and alternative specifications.
@@ -1084,7 +1137,9 @@ $code-bg: $altmejd-code-bg !default;
   line-height: 1.15;
 }
 
-.reveal .slide .slide-nav > p {
+.reveal .slide .slide-nav > p,
+.reveal .slide .slide-nav-group,
+.reveal .slide .slide-nav-group > p {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -1095,7 +1150,8 @@ $code-bg: $altmejd-code-bg !default;
 
 // Link groups commonly use middle-dot text separators. The flex gap is the
 // separator now, so collapse raw text nodes while retaining the links.
-.reveal .slide .slide-nav > p {
+.reveal .slide .slide-nav > p,
+.reveal .slide .slide-nav-group > p {
   font-size: 0;
 }
 
@@ -1103,10 +1159,11 @@ $code-bg: $altmejd-code-bg !default;
   display: inline-flex;
   align-items: center;
   column-gap: 0.16em;
-  min-height: 0;
+  box-sizing: border-box;
+  min-height: max(32px, calc(32px / var(--altmejd-scale, 1)));
   padding: 0.32em 0.65em;
   color: var(--altmejd-primary);
-  font-size: 15px;
+  font-size: max(18px, calc(14px / var(--altmejd-scale, 1)));
   font-weight: 560;
   line-height: 1.15;
   text-decoration: none;
@@ -1154,7 +1211,7 @@ $code-bg: $altmejd-code-bg !default;
   transform: translateY(1px);
 }
 
-.reveal .slide .slide-nav a:focus-visible {
+.reveal .slide a:focus-visible {
   outline: 3px solid var(--altmejd-accent);
   outline-offset: 2px;
 }
@@ -1219,6 +1276,7 @@ $code-bg: $altmejd-code-bg !default;
 // Visible asides use the same bottom-box contract in presentations and
 // handouts. Speaker notes remain hidden until handout mode is requested.
 .reveal .slide > .aside,
+.reveal .slide > .altmejd-aside,
 .reveal .slide > aside:not(.notes) {
   position: absolute;
   right: 0;
@@ -1242,25 +1300,25 @@ $code-bg: $altmejd-code-bg !default;
   border-radius: $altmejd-radius;
 }
 
-.reveal .slide > :is(.aside, aside:not(.notes)).is-overflowing {
+.reveal .slide > :is(.aside, .altmejd-aside, aside:not(.notes)).is-overflowing {
   border-bottom: 2px dashed var(--altmejd-muted);
 }
 
-.reveal .slide > :is(.aside, aside:not(.notes)) > :first-child {
+.reveal .slide > :is(.aside, .altmejd-aside, aside:not(.notes)) > :first-child {
   margin-top: 0;
 }
 
-.reveal .slide > :is(.aside, aside:not(.notes)) > :last-child {
+.reveal .slide > :is(.aside, .altmejd-aside, aside:not(.notes)) > :last-child {
   margin-bottom: 0;
 }
 
 // Quarto wraps aside content in an inner div, so the child rules above never
 // reach the paragraphs; their default margins would pad the compact box.
-.reveal .slide > :is(.aside, aside:not(.notes)) p {
+.reveal .slide > :is(.aside, .altmejd-aside, aside:not(.notes)) p {
   margin: 0 0 0.3em;
 }
 
-.reveal .slide > :is(.aside, aside:not(.notes)) p:last-child {
+.reveal .slide > :is(.aside, .altmejd-aside, aside:not(.notes)) p:last-child {
   margin-bottom: 0;
 }
 
@@ -1430,13 +1488,14 @@ html.altmejd-handout .reveal .slide.has-handout-notes {
 }
 
 html.altmejd-handout .reveal .slide.has-handout-notes > .aside,
+html.altmejd-handout .reveal .slide.has-handout-notes > .altmejd-aside,
 html.altmejd-handout .reveal .slide.has-handout-notes > aside:not(.notes) {
   bottom: calc(
     var(--altmejd-handout-note-reserve, 0px) + var(--altmejd-navigation-reserve, 0px)
   );
 }
 
-html.altmejd-handout .reveal .slide > aside.notes {
+html.altmejd-handout .reveal .slide > aside.notes:not(.live-only) {
   position: absolute;
   right: 0;
   bottom: var(--altmejd-navigation-reserve, 0px);
@@ -1533,13 +1592,39 @@ body .slide-menu-wrapper li.slide-menu-item-vertical:hover {
   background-color: var(--altmejd-surface);
 }
 
-@media (max-width: 700px) {
-  .reveal .slide .figure-panels {
-    grid-template-columns: minmax(0, 1fr);
+// Reveal culls distant slides with an inline display:none. Custom layout
+// modes must not override that hiding decision or leave invisible controls.
+.reveal .slides section[style*="display: none"] {
+  display: none !important;
+}
+
+// Quarto embeds white SVG fills in these pseudo-element backgrounds, so
+// setting color alone cannot adapt them to the menu's light surface.
+body .slide-menu-wrapper .slide-menu-toolbar i::before {
+  filter: brightness(0) opacity(0.7);
+}
+
+.reveal:has(.slides section:is(.dark-bg, .agenda-slide, .closing-slide, .full-bleed).present) .slide-menu-button a {
+  color: #fff;
+}
+
+.reveal:has(.slides section:is(.dark-bg, .agenda-slide, .closing-slide, .full-bleed).present) .slide-menu-button i::before {
+  filter: brightness(0) invert(1);
+}
+
+html.altmejd-pdf .reveal .slide-number {
+  right: calc(8px * var(--altmejd-chrome-scale, 1));
+  bottom: calc(8px * var(--altmejd-chrome-scale, 1));
+}
+
+@media (max-width: 900px) {
+  html:not(.altmejd-pdf) .reveal .slide .slide-nav,
+  html:not(.altmejd-pdf) .reveal .footer.footer {
+    display: none !important;
   }
 
-  .reveal .slide .figure-panels > :only-child {
-    grid-column: auto;
+  html.altmejd-mobile-links:not(.altmejd-pdf) .reveal :is(.slide-number, .slide-menu-button) {
+    bottom: 76px;
   }
 }
 

@@ -229,14 +229,53 @@ export function collectAssetRefs(html: string): string[] {
   return [...refs].sort();
 }
 
+// Relocating the entry HTML to /<slug>/ must preserve references from nested
+// output directories. Leave URL encoding, query strings, and anchors intact.
+export function rebaseAssetRefs(html: string, entryPath: string): string {
+  const directory = entryPath.includes("/") ? entryPath.slice(0, entryPath.lastIndexOf("/")) : "";
+  const rebase = (raw: string): string => {
+    const decoded = decodeEntities(raw.trim());
+    if (!isLocalRelative(decoded)) {
+      return raw;
+    }
+    const path = decodePercent(stripQueryAndFragment(decoded));
+    const resolved = resolveStagingRef(path, directory);
+    if (resolved === null) {
+      return raw; // The staging preflight reports escapes before writing HTML.
+    }
+    const suffix = decoded.slice(stripQueryAndFragment(decoded).length);
+    const target = resolved === entryPath ? "index.html" : resolved;
+    return (target.split("/").map(encodeURIComponent).join("/") + suffix)
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  };
+  const attributes = html.replace(REF_ATTRIBUTE, (match, quoted: string) =>
+    match.replace(quoted, `${quoted[0]}${rebase(quoted.slice(1, -1))}${quoted[0]}`),
+  );
+  return attributes.replace(SRCSET_ATTRIBUTE, (match, quoted: string) => {
+    const value = quoted.slice(1, -1);
+    // Data URLs contain commas. Quarto embeds these without local candidates.
+    if (value.trim().startsWith("data:")) {
+      return match;
+    }
+    const rebased = value
+      .split(",")
+      .map((candidate) =>
+        candidate.replace(/^(\s*)(\S+)/, (_match, space, url) => `${space}${rebase(url)}`),
+      )
+      .join(",");
+    return match.replace(quoted, `${quoted[0]}${rebased}${quoted[0]}`);
+  });
+}
+
 const CSS_URL = /url\(\s*("[^"]*"|'[^']*'|[^"')][^)]*)\s*\)/gi;
 const CSS_IMPORT = /@import\s+("[^"]*"|'[^']*')/gi;
 
-// Collect local relative url() and @import references from a top-level
-// stylesheet, so user CSS beside the deck stages its images and fonts.
-// Stylesheets inside referenced directories need no scan: those directories
-// are copied wholesale and their internal references stay relative.
+// Collect local relative url() and @import references. The caller resolves
+// them against each stylesheet's directory, never the entry HTML's directory.
 export function collectCssRefs(css: string): string[] {
+  css = css.replace(/\/\*[\s\S]*?\*\//g, " ");
   const refs = new Set<string>();
   const add = (raw: string) => {
     let value = raw.trim();
@@ -258,31 +297,58 @@ export function collectCssRefs(css: string): string[] {
 }
 
 export interface StagingPlan {
-  // Top-level directories to copy wholesale (e.g. deck_files, assets).
+  // Asset directories to copy wholesale (e.g. talks/deck_files, site_libs).
   directories: string[];
-  // Individual top-level files to copy.
+  // Individual files, relative to the rendered output root.
   files: string[];
   // References that escape the deck directory and cannot be published.
   outside: string[];
 }
 
+function normalizeRelativeRef(ref: string): string[] {
+  const parts: string[] = [];
+  for (const part of ref.replace(/\\/g, "/").split("/")) {
+    if (part === "" || part === ".") {
+      continue;
+    }
+    if (part === ".." && parts.length > 0 && parts.at(-1) !== "..") {
+      parts.pop();
+    } else {
+      parts.push(part);
+    }
+  }
+  return parts;
+}
+
+export function resolveStagingRef(ref: string, directory = ""): string | null {
+  if (!isLocalRelative(ref)) {
+    return null;
+  }
+  const parts = normalizeRelativeRef(directory === "" ? ref : `${directory}/${ref}`);
+  return parts.length === 0 || parts[0] === ".." ? null : parts.join("/");
+}
+
 // Referenced directories are copied wholesale because CSS inside them loads
 // fonts and images the HTML scan cannot see.
-export function planStaging(refs: readonly string[]): StagingPlan {
+export function planStaging(refs: readonly string[], directory = ""): StagingPlan {
   const directories = new Set<string>();
   const files = new Set<string>();
   const outside = new Set<string>();
   for (const ref of refs) {
-    const normalized = ref.replace(/\\/g, "/");
-    if (normalized.split("/").includes("..")) {
+    const normalized = resolveStagingRef(ref, directory);
+    const parts = normalizeRelativeRef(ref);
+    while (parts[0] === "..") {
+      parts.shift();
+    }
+    if (normalized === null || parts.length === 0) {
       outside.add(ref);
       continue;
     }
-    const slash = normalized.indexOf("/");
-    if (slash === -1) {
+    if (parts.length === 1 && !ref.endsWith("/")) {
       files.add(normalized);
     } else {
-      directories.add(normalized.slice(0, slash));
+      const baseParts = normalized.split("/");
+      directories.add(baseParts.slice(0, baseParts.length - parts.length + 1).join("/"));
     }
   }
   return {

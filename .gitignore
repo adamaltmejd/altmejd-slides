@@ -5,7 +5,7 @@
 **/*_files/
 /examples/.quarto/
 /examples/_site/
-/node_modules/
+node_modules/
 /output/
 /tmp/
 *.pyc

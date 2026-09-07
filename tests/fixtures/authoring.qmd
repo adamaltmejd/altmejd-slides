@@ -1,0 +1,188 @@
+---
+title: "Authoring Composition Fixture"
+format:
+  altmejd-slides-revealjs:
+    transition: none
+    width: 1600
+    height: 900
+altmejd-slides:
+  agenda:
+    clickable: true
+slide-remote:
+  disable-on-params: [custom-preview, reading]
+---
+
+# Main section
+
+ORDINARY QUARTO CONTROLS COMPOSE WITH THE EXTENSION
+
+## Fixed image with an aside {#fixed-image-aside}
+
+![](../../examples/assets/estimate.svg){.nostretch width="300" fig-alt="A deliberately small synthetic estimate"}
+
+::: {.aside}
+Adding a source note must not enlarge a fixed image.
+:::
+
+## Fixed height with an aside {#fixed-height-aside}
+
+![](../../examples/assets/estimate.svg){height="180" fig-alt="A synthetic estimate with an explicit height"}
+
+::: {.aside}
+The native height exclusion also applies above an aside.
+:::
+
+## Slide sizing opt-out {#fixed-slide-aside .nostretch}
+
+![](../../examples/assets/estimate.svg){width="300" fig-alt="A synthetic estimate on a slide that opts out of stretching"}
+
+::: {.aside}
+The slide-level opt-out wins too.
+:::
+
+## Captioned sizing opt-out {#fixed-caption-aside}
+
+![The caption stays attached to the small figure](../../examples/assets/estimate.svg){.nostretch width="300" fig-alt="A small captioned synthetic estimate"}
+
+::: {.aside}
+Caption wrappers must not opt fixed images into layout-fill.
+:::
+
+## Several navigation groups {#merged-navigation}
+
+Separate link paragraphs and explicit groups share one row.
+
+[Data](#fixed-image-aside)
+
+[Methods](#fixed-height-aside)
+
+::: {#explicit-navigation .slide-nav}
+[Back](#fixed-slide-aside){.back}
+:::
+
+::: {#live-navigation .slide-nav .live-only}
+[Live discussion](#native-columns)
+:::
+
+::: {#handout-navigation .slide-nav .handout-only}
+[Reading detail](#automatic-panels)
+:::
+
+## Navigation reserved only when visible {#gated-navigation}
+
+![](../../examples/assets/estimate.svg){.r-stretch fig-alt="A synthetic estimate that must remain visible in both modes"}
+
+::: {.slide-nav .handout-only}
+[Reading detail](#automatic-panels)
+:::
+
+## Aside delivery modes {#gated-asides}
+
+![](../../examples/assets/estimate.svg){.r-stretch fig-alt="A synthetic estimate above the currently visible aside"}
+
+::: {#live-aside .aside .live-only}
+A live discussion cue.
+:::
+
+::: {#handout-aside .aside .handout-only}
+A detailed reading note.
+:::
+
+## Speaker-note delivery mode {#gated-speaker-note}
+
+![](../../examples/assets/estimate.svg){.r-stretch fig-alt="A synthetic estimate above an optional speaker note"}
+
+::: {.notes .live-only}
+A live-only speaker cue that must be absent from handouts.
+:::
+
+## Preserve unequal native columns {#native-columns}
+
+:::: {.columns .no-figure-panels}
+::: {.column width="30%"}
+![](../../examples/assets/estimate.svg){fig-alt="A small synthetic estimate in the narrow column"}
+:::
+::: {.column width="70%"}
+![](../../examples/assets/trend.svg){fig-alt="Synthetic trends in the wide column"}
+:::
+::::
+
+## Automatic figure panels still fill {#automatic-panels}
+
+:::: {.columns}
+::: {.column width="50%"}
+**Estimate**
+
+![](../../examples/assets/estimate.svg){fig-alt="A synthetic estimate in an automatic figure panel"}
+:::
+::: {.column width="50%"}
+**Trend**
+
+![](../../examples/assets/trend.svg){fig-alt="A synthetic trend in an automatic figure panel"}
+:::
+::::
+
+# Second section
+
+ACCESSIBLE NAVIGATION AND CLICKABLE QR CODES
+
+## Linked QR code {.closing-slide #linked-qr}
+
+[Example paper](https://example.org/paper)
+
+[QR code for the paper](https://example.org/paper "Open the paper"){.qr #paper-qr}
+
+## Internal linked QR code {.closing-slide #internal-qr}
+
+[Return to the panels](#automatic-panels){.qr}
+
+# Appendix
+
+## Backup detail {#backup-detail}
+
+This stays navigable and printable without appearing in the main agenda.
+
+# Additional backup
+
+## More backup detail
+
+Later appendix sections are omitted from the main agenda too.
+
+## Background document {#background-document background-iframe="../../examples/assets/estimate.svg" background-alt="Synthetic estimate as an embedded background"}
+
+## Canvas and decorative content {#canvas-content}
+
+```{=html}
+<span id="decorative-mark" aria-hidden="true">*</span>
+<canvas id="sample-chart" width="100" height="50" role="img" aria-label="A solid burgundy rectangle"></canvas>
+<script>document.addEventListener("DOMContentLoaded", () => { const context = document.getElementById("sample-chart").getContext("2d"); context.fillStyle = "#62273b"; context.fillRect(0, 0, 100, 50); });</script>
+```
+
+## Dark component pairs {#dark-components .dark-bg background-color="#0f172a"}
+
+::: {.stat-row}
+[42]{.stat} applications
+:::
+
+> Read the [study](https://example.org) and its **qualification**.
+
+[A highlighted result]{.emph}
+
+::: {.table-note}
+A source note directly on the dark surface.
+:::
+
+[Data](#fixed-image-aside)
+
+## Deliberate preflight failures {#preflight-errors}
+
+```{=html}
+<img src="../../examples/assets/estimate.svg" width="100">
+<img src="missing-preflight-image.svg" alt="Intentionally missing fixture image">
+<pre style="height: 35px; overflow: hidden">First line
+Second line
+Third line
+Fourth line</pre>
+```
+
+[A deliberately broken destination](#missing-preflight-target)

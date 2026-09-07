@@ -9,6 +9,7 @@ altmejd-slides:
   agenda:
     heading: false
     bullets: none
+    include-appendix: true
 ---
 
 # Motivation

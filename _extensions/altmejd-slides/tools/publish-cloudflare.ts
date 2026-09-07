@@ -7,6 +7,8 @@
 // filters, plugins, or render pipeline invokes this script. See
 // docs/publishing.md in the repository for setup and rollback.
 
+import { dirname, relative, resolve, sep } from "node:path";
+
 import {
   type CloudflareTarget,
   collectAssetRefs,
@@ -21,8 +23,10 @@ import {
   type PublishArtifact,
   planStaging,
   publicUrl,
+  rebaseAssetRefs,
   resolveArtifacts,
   resolveInput,
+  resolveStagingRef,
   resolveTarget,
   validateSlug,
   workerName,
@@ -248,9 +252,19 @@ async function inspectDeck(input: string): Promise<{
     | Record<string, unknown>
     | undefined;
   const rawOutputDir = projectConfig?.["output-dir"];
-  const outputDir =
-    typeof rawOutputDir === "string" && rawOutputDir.trim() !== "" ? rawOutputDir.trim() : ".";
-  return { outputFile, outputDir, cloudflareMeta };
+  const inputPath = resolve(input);
+  const projectDir = typeof project.dir === "string" ? project.dir : dirname(inputPath);
+  const outputDir = resolve(
+    projectDir,
+    typeof rawOutputDir === "string" && rawOutputDir.trim() !== "" ? rawOutputDir.trim() : ".",
+  );
+  const inputDirectory = relative(projectDir, dirname(inputPath));
+  const entryPath = resolve(outputDir, inputDirectory, outputFile);
+  const outputRelative = relative(outputDir, entryPath).split(sep).join("/");
+  if (resolveStagingRef(outputRelative) === null) {
+    fail(`rendered entry leaves the output directory: ${entryPath}`);
+  }
+  return { outputFile: outputRelative, outputDir, cloudflareMeta };
 }
 
 // The default slug source: the deck repository's directory name, from the git
@@ -276,7 +290,11 @@ async function listQmdFiles(): Promise<string[]> {
   return files.sort();
 }
 
-async function copyDir(from: string, to: string): Promise<void> {
+async function copyDir(
+  from: string,
+  to: string,
+  copied?: (source: string, destination: string) => void,
+): Promise<void> {
   await Deno.mkdir(to, { recursive: true });
   for await (const entry of Deno.readDir(from)) {
     if (entry.name.startsWith(".")) {
@@ -290,9 +308,10 @@ async function copyDir(from: string, to: string): Promise<void> {
       continue; // dangling symlink; a referenced one fails the exists-check
     }
     if (info.isDirectory) {
-      await copyDir(source, destination);
+      await copyDir(source, destination, copied);
     } else if (info.isFile) {
       await Deno.copyFile(source, destination);
+      copied?.(source, destination);
     }
   }
 }
@@ -510,87 +529,93 @@ async function stageDeck(
 ): Promise<string> {
   const publicDir = `${stagingDir}/public`;
   const deckDir = `${publicDir}/${target.slug}`;
+  const manifestPath = `${stagingDir}/staged-files.json`;
   // A reused --staging-dir must not keep files deleted from the deck.
   await Deno.remove(publicDir, { recursive: true }).catch(() => {});
+  await Deno.remove(manifestPath).catch(() => {});
   await Deno.mkdir(deckDir, { recursive: true });
 
-  // References in the HTML are relative to the rendered output directory
-  // (project.output-dir for Quarto projects, the source directory otherwise).
-  const fromBase = (ref: string): string => (baseDir === "." ? ref : `${baseDir}/${ref}`);
-  const entryName = entryHtml.split("/").pop() ?? entryHtml;
+  const fromBase = (ref: string): string => resolve(baseDir, ref);
+  const entryPath = relative(baseDir, entryHtml).split(sep).join("/");
+  const entryDirectory = entryPath.includes("/")
+    ? entryPath.slice(0, entryPath.lastIndexOf("/"))
+    : "";
+  const manifest = new Map<string, { kind: string; source: string }>();
+  const record = (source: string, destination: string, kind = "asset") => {
+    manifest.set(relative(publicDir, destination).split(sep).join("/"), {
+      kind,
+      source: relative(Deno.cwd(), source).split(sep).join("/"),
+    });
+  };
+  const copiedDirectories = new Set<string>();
+  const copiedFiles = new Set<string>();
+  const pendingCss = new Set<string>();
+  const copied = (source: string, destination: string) => {
+    record(source, destination);
+    if (source.toLowerCase().endsWith(".css")) {
+      pendingCss.add(relative(baseDir, source).split(sep).join("/"));
+    }
+  };
+
+  async function stageReferences(refs: string[], directory: string): Promise<void> {
+    const plan = planStaging(refs, directory);
+    if (plan.outside.length > 0) {
+      fail(
+        "these references leave the output directory or select its root and cannot be published:\n  " +
+          plan.outside.join("\n  "),
+      );
+    }
+    for (const dir of plan.directories) {
+      if (!copiedDirectories.has(dir)) {
+        if (!(await exists(fromBase(dir)))) {
+          fail(`referenced directory is missing: ${fromBase(dir)}`);
+        }
+        await copyDir(fromBase(dir), `${deckDir}/${dir}`, copied);
+        copiedDirectories.add(dir);
+      }
+    }
+    for (const file of plan.files) {
+      if (file === entryPath || copiedFiles.has(file)) {
+        continue; // Entry links are rewritten to index.html.
+      }
+      if (!(await exists(fromBase(file)))) {
+        fail(`referenced file is missing: ${fromBase(file)}`);
+      }
+      const destination = `${deckDir}/${file}`;
+      await Deno.mkdir(dirname(destination), { recursive: true });
+      await Deno.copyFile(fromBase(file), destination);
+      copied(fromBase(file), destination);
+      copiedFiles.add(file);
+    }
+    const missing = [];
+    for (const ref of refs) {
+      const file = resolveStagingRef(ref, directory);
+      if (file !== entryPath && (file === null || !(await exists(`${deckDir}/${file}`)))) {
+        missing.push(ref);
+      }
+    }
+    if (missing.length > 0) {
+      fail(`staged deck is missing referenced assets:\n  ${missing.join("\n  ")}`);
+    }
+  }
 
   const html = await Deno.readTextFile(entryHtml);
-  await Deno.writeTextFile(`${deckDir}/index.html`, html);
-
-  const refs = collectAssetRefs(html);
-  const plan = planStaging(refs);
-  if (plan.outside.length > 0) {
-    fail(
-      "these references leave the output directory and cannot be published:\n  " +
-        plan.outside.join("\n  "),
-    );
-  }
-  for (const dir of plan.directories) {
-    if (!(await exists(fromBase(dir)))) {
-      fail(`referenced directory is missing: ${fromBase(dir)}`);
-    }
-    await copyDir(fromBase(dir), `${deckDir}/${dir}`);
-  }
-  for (const file of plan.files) {
-    if (file === entryName) {
-      continue; // the entry document is already staged as index.html
-    }
-    if (!(await exists(fromBase(file)))) {
-      fail(`referenced file is missing: ${fromBase(file)}`);
-    }
-    await Deno.copyFile(fromBase(file), `${deckDir}/${file}`);
-  }
-
-  // Top-level stylesheets can reference images and fonts the HTML scan
-  // cannot see; stage one level of their url()/@import targets too.
-  const cssRefs = new Set<string>();
-  for (const file of plan.files) {
-    if (file === entryName || !file.toLowerCase().endsWith(".css")) {
+  await stageReferences(collectAssetRefs(html), entryDirectory);
+  // CSS resolves against its own directory, including shared ../site_libs and
+  // imports outside a copied asset directory. The set bounds cycles.
+  const examinedCss = new Set<string>();
+  for (const file of pendingCss) {
+    if (examinedCss.has(file)) {
       continue;
     }
-    for (const ref of collectCssRefs(await Deno.readTextFile(fromBase(file)))) {
-      cssRefs.add(ref);
-    }
+    examinedCss.add(file);
+    const directory = file.includes("/") ? file.slice(0, file.lastIndexOf("/")) : "";
+    await stageReferences(collectCssRefs(await Deno.readTextFile(fromBase(file))), directory);
   }
-  const cssPlan = planStaging([...cssRefs]);
-  if (cssPlan.outside.length > 0) {
-    fail(
-      "stylesheet references leave the output directory and cannot be published:\n  " +
-        cssPlan.outside.join("\n  "),
-    );
-  }
-  for (const dir of cssPlan.directories) {
-    if (!plan.directories.includes(dir)) {
-      if (!(await exists(fromBase(dir)))) {
-        fail(`directory referenced from a stylesheet is missing: ${fromBase(dir)}`);
-      }
-      await copyDir(fromBase(dir), `${deckDir}/${dir}`);
-    }
-  }
-  for (const file of cssPlan.files) {
-    if (!plan.files.includes(file) && (await exists(fromBase(file)))) {
-      await Deno.copyFile(fromBase(file), `${deckDir}/${file}`);
-    }
-  }
+  await Deno.writeTextFile(`${deckDir}/index.html`, rebaseAssetRefs(html, entryPath));
+  record(entryHtml, `${deckDir}/index.html`, "entry");
 
-  // Every scanned reference must resolve inside the staged tree.
-  const missing: string[] = [];
-  for (const ref of [...refs, ...cssRefs]) {
-    if (ref !== entryName && !(await exists(`${deckDir}/${ref}`))) {
-      missing.push(ref);
-    }
-  }
-  if (missing.length > 0) {
-    fail(`staged deck is missing referenced assets:\n  ${missing.join("\n  ")}`);
-  }
-
-  // Configured artifacts (e.g. a slides PDF) are staged beside the deck.
-  // Sources are project-root relative; the publisher never builds them.
+  // Sources are project-root relative; the publisher never builds artifacts.
   for (const artifact of artifacts) {
     if (!(await exists(artifact.source))) {
       fail(
@@ -599,19 +624,25 @@ async function stageDeck(
       );
     }
     const targetPath = `${deckDir}/${artifact.target}`;
-    const parent = targetPath.slice(0, targetPath.lastIndexOf("/"));
-    await Deno.mkdir(parent, { recursive: true });
+    await Deno.mkdir(dirname(targetPath), { recursive: true });
     await Deno.copyFile(artifact.source, targetPath);
+    record(resolve(artifact.source), targetPath, `artifact:${artifact.name}`);
     console.log(`artifact ${artifact.name}: ${publicUrl(target)}${artifact.target}`);
   }
 
-  // Served for every asset beneath the deck's routes; see headersFileContent.
   await Deno.writeTextFile(`${publicDir}/_headers`, headersFileContent());
-
-  console.log(
-    `staged ${plan.directories.length + cssPlan.directories.length} directories, ` +
-      `${plan.files.length + 1} files, and ${artifacts.length} artifacts under ${target.slug}/`,
+  manifest.set("_headers", { kind: "generated", source: "publisher cache policy" });
+  const files = [];
+  for (const [path, origin] of [...manifest].sort(([a], [b]) => a.localeCompare(b))) {
+    files.push({ path, bytes: (await Deno.stat(`${publicDir}/${path}`)).size, ...origin });
+  }
+  // Review metadata stays outside public/ and is never uploaded.
+  await Deno.writeTextFile(
+    manifestPath,
+    `${JSON.stringify({ url: publicUrl(target), files }, null, 2)}\n`,
   );
+  console.log(`staged ${files.length} files and ${artifacts.length} configured artifacts`);
+  console.log(`staged file manifest: ${manifestPath}`);
   return publicDir;
 }
 
@@ -976,7 +1007,7 @@ async function publish(opts: Options): Promise<void> {
   if (render.code !== 0) {
     fail(`quarto render ${input} failed with exit code ${render.code}`);
   }
-  const entryHtml = outputDir === "." ? outputFile : `${outputDir}/${outputFile}`;
+  const entryHtml = resolve(outputDir, outputFile);
   if (!(await exists(entryHtml))) {
     fail(`render did not produce ${entryHtml}`);
   }

@@ -178,15 +178,24 @@ async function auditShowcase(page, url, mode) {
         const agenda = slide.querySelector(":scope > .agenda");
         const kicker = slide.querySelector(":scope > .section-kicker");
         const items = agenda ? Array.from(agenda.children) : [];
-        const weights = new Set(items.map((item) => getComputedStyle(item).fontWeight));
+        const active = items.find((item) => item.classList.contains("agenda-active"));
+        const strongerActive =
+          active &&
+          items
+            .filter((item) => item !== active)
+            .every(
+              (item) =>
+                Number(getComputedStyle(active).fontWeight) >
+                Number(getComputedStyle(item).fontWeight),
+            );
         const footer = document.querySelector(".footer");
         if (
           !agenda ||
           !kicker ||
           rect(kicker).bottom > rect(agenda).top + 1 ||
-          items.length !== 5 ||
+          items.length !== 4 ||
           items.filter((item) => item.classList.contains("agenda-active")).length !== 1 ||
-          weights.size !== 1 ||
+          !strongerActive ||
           getComputedStyle(footer).display !== "none"
         ) {
           agendaFailures.push(slide.id || "(untitled)");
@@ -341,7 +350,7 @@ function assertAudit(name, audit, expectedHandout) {
     titleFits: !audit.titleFits,
     wrongFeatureCounts:
       audit.slides !== 36 ||
-      audit.agendas !== 5 ||
+      audit.agendas !== 4 ||
       audit.tableNotes !== 2 ||
       audit.authorCount !== 4 ||
       audit.images < 16 ||

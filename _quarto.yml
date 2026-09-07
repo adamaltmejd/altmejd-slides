@@ -7,6 +7,7 @@ project:
     - tests/fixtures/no-agenda.qmd
     - tests/fixtures/agenda-numbered.qmd
     - tests/fixtures/agenda-none.qmd
+    - tests/fixtures/authoring.qmd
 
 execute:
   freeze: auto
