@@ -120,6 +120,88 @@ try {
         automaticFill: automatic.classList.contains("layout-fill"),
       };
 
+      const textColumns = await show("text-column-spacing");
+      const columnIntro = textColumns.querySelector(":scope > p");
+      const columns = Array.from(textColumns.querySelectorAll(".column"));
+      const columnHeadings = columns.map((column) => column.querySelector("h3"));
+      const followingProse = textColumns.querySelector(".columns + p");
+      const scale = globalThis.Reveal.getScale();
+      const rect = (element) => element.getBoundingClientRect();
+      const columnSpacing = {
+        before: (rect(columnHeadings[0]).top - rect(columnIntro).bottom) / scale,
+        afterHeading:
+          (rect(columns[0].querySelector("li")).top - rect(columnHeadings[0]).bottom) / scale,
+        after:
+          (rect(followingProse).top - Math.max(...columns.map((column) => rect(column).bottom))) /
+          scale,
+        headingOffset: Math.abs(rect(columnHeadings[0]).top - rect(columnHeadings[1]).top) / scale,
+        widthRatio: columns[0].offsetWidth / columns[1].offsetWidth,
+      };
+
+      const proseTable = await show("prose-table-spacing");
+      const paragraphs = proseTable.querySelectorAll(":scope > p");
+      const sectionHeading = proseTable.querySelector("h3");
+      const tableRect = rect(proseTable.querySelector("table"));
+      const slideRect = rect(proseTable);
+      const proseSpacing = {
+        betweenParagraphs: (rect(paragraphs[1]).top - rect(paragraphs[0]).bottom) / scale,
+        beforeHeading: (rect(sectionHeading).top - rect(paragraphs[1]).bottom) / scale,
+        minimumCellPadding: Math.min(
+          ...Array.from(proseTable.querySelectorAll("th, td"), (cell) => {
+            const style = getComputedStyle(cell);
+            return (
+              Math.min(
+                Number.parseFloat(style.paddingTop),
+                Number.parseFloat(style.paddingBottom),
+              ) / Number.parseFloat(style.fontSize)
+            );
+          }),
+        ),
+        tableFits:
+          tableRect.left >= slideRect.left - 1 &&
+          tableRect.right <= slideRect.right + 1 &&
+          tableRect.top >= slideRect.top - 1 &&
+          tableRect.bottom <= slideRect.bottom + 1,
+      };
+
+      const notedTable = await show("handout-table-spacing");
+      const notedCellStyle = getComputedStyle(notedTable.querySelector("td"));
+      const bottomBoxes = Array.from(
+        notedTable.querySelectorAll(":scope > .aside, :scope > .altmejd-aside, :scope > aside"),
+      ).filter(visible);
+      const contentBottom = Math.max(
+        ...Array.from(
+          notedTable.querySelectorAll("table, :scope > p"),
+          (element) => rect(element).bottom,
+        ),
+      );
+      const handoutTable = {
+        cellPadding:
+          Number.parseFloat(notedCellStyle.paddingTop) / Number.parseFloat(notedCellStyle.fontSize),
+        noteVisible: visible(notedTable.querySelector("aside.notes")),
+        bottomBoxes: bottomBoxes.length,
+        clearance: (Math.min(...bottomBoxes.map((box) => rect(box).top)) - contentBottom) / scale,
+        boxesFit: bottomBoxes.every((box) => box.scrollHeight <= box.clientHeight + 2),
+      };
+
+      const headingSizes = async (id) => {
+        const slide = await show(id);
+        return Object.fromEntries(
+          ["h1", "h2", "h3", "p"].map((tag) => [
+            tag,
+            Number.parseFloat(getComputedStyle(slide.querySelector(`:scope > ${tag}`)).fontSize),
+          ]),
+        );
+      };
+      const headings = {
+        normal: await headingSizes("normal-heading-sizing"),
+        smallerSlide: await headingSizes("smaller-heading-sizing"),
+      };
+      const reveal = document.querySelector(".reveal");
+      reveal.classList.add("smaller");
+      headings.smallerDeck = await headingSizes("normal-heading-sizing");
+      reveal.classList.remove("smaller");
+
       const qrSlide = await show("linked-qr");
       const qrLink = qrSlide.querySelector("a.qr-link");
       const qrImage = qrLink.querySelector("img.qr");
@@ -170,7 +252,19 @@ try {
       const disabled = document
         .querySelector("meta[name='slide-remote-disable-on-params']")
         .content.split(",");
-      return { sizes, navigation, gating, panels, qr, agenda, disabled };
+      return {
+        sizes,
+        navigation,
+        gating,
+        panels,
+        columnSpacing,
+        proseSpacing,
+        handoutTable,
+        headings,
+        qr,
+        agenda,
+        disabled,
+      };
     });
 
     for (const [id, size] of Object.entries(result.sizes)) {
@@ -203,6 +297,51 @@ try {
     assert.ok(Math.abs(result.panels.nativeWidthRatio - 3 / 7) < 0.01);
     assert.equal(result.panels.automaticUpgraded, true);
     assert.equal(result.panels.automaticFill, true);
+    assert.ok(result.columnSpacing.before >= 44, "text columns crowd the introductory paragraph");
+    assert.ok(
+      result.columnSpacing.afterHeading > 0 &&
+        result.columnSpacing.afterHeading <= 24 &&
+        result.columnSpacing.afterHeading < result.columnSpacing.before,
+      "the column heading must stay close to its first bullet",
+    );
+    assert.ok(result.columnSpacing.after >= 28, "following prose crowds the text columns");
+    assert.ok(result.columnSpacing.headingOffset < 1, "text column headings do not align");
+    assert.ok(Math.abs(result.columnSpacing.widthRatio - 3 / 7) < 0.01);
+    assert.ok(result.proseSpacing.betweenParagraphs >= 24, "consecutive paragraphs are cramped");
+    assert.ok(
+      result.proseSpacing.beforeHeading >= 36,
+      "the section heading crowds preceding prose",
+    );
+    assert.ok(
+      result.proseSpacing.minimumCellPadding >= 0.3,
+      "table rows lack vertical breathing room",
+    );
+    assert.equal(result.proseSpacing.tableFits, true);
+    assert.ok(
+      handout
+        ? Math.abs(result.handoutTable.cellPadding - 0.16) < 0.01
+        : result.handoutTable.cellPadding >= 0.3,
+      "table padding should compact only when handout notes need space",
+    );
+    assert.equal(result.handoutTable.noteVisible, handout);
+    assert.equal(result.handoutTable.bottomBoxes, handout ? 2 : 1);
+    assert.ok(
+      result.handoutTable.clearance >= 0,
+      "table or following prose overlaps the bottom notes",
+    );
+    assert.equal(result.handoutTable.boxesFit, true);
+    for (const [tag, size] of Object.entries({ h1: 66, h2: 51.2, h3: 33.6, p: 40 })) {
+      assert.ok(Math.abs(result.headings.normal[tag] - size) < 0.1, `normal ${tag} size changed`);
+    }
+    for (const mode of ["smallerSlide", "smallerDeck"]) {
+      assert.ok(Math.abs(result.headings[mode].p / result.headings.normal.p - 0.7) < 0.01);
+      for (const tag of ["h1", "h2", "h3"]) {
+        assert.ok(
+          Math.abs(result.headings[mode][tag] - result.headings.normal[tag]) < 0.1,
+          `${mode} changes the ${tag} heading size`,
+        );
+      }
+    }
     assert.equal(result.qr.href, "https://example.org/paper");
     assert.equal(result.qr.alt, "QR code for the paper");
     assert.equal(result.qr.title, "Open the paper");

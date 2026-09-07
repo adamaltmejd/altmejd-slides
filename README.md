@@ -29,7 +29,7 @@ quarto update adamaltmejd/altmejd-slides
 Pin a deck to a released extension when reproducibility matters:
 
 ```sh
-quarto add adamaltmejd/altmejd-slides@v0.7.4
+quarto add adamaltmejd/altmejd-slides@v0.7.5
 ```
 
 The lean starter lives in [`template.qmd`](template.qmd). Its defaults are

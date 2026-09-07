@@ -209,7 +209,6 @@
           )
         : 1;
       const root = reveal.getRevealElement();
-      root.style.setProperty("--altmejd-scale", reveal.getScale());
       root.style.setProperty(
         "--altmejd-chrome-scale",
         Number.isFinite(captureScale) ? captureScale : 1,

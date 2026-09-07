@@ -58,6 +58,12 @@ $altmejd-handout-note-max-height: 32% !default;
 // units cannot (the heading resolves em against its own larger font).
 $altmejd-attribution-gutter: 36px !default;
 
+// Quarto compensates heading sizes inside `.smaller` using these native
+// variables, so they must match the ordinary headings below.
+$presentation-h1-font-size: 1.65em !default;
+$presentation-h2-font-size: $altmejd-heading-scale * 1em !default;
+$presentation-h3-font-size: 0.84em !default;
+
 $code-block-bg: $altmejd-code-bg !default;
 $code-block-border-color: $altmejd-border !default;
 $code-color: $body-color !default;
@@ -119,7 +125,7 @@ $code-bg: $altmejd-code-bg !default;
 }
 
 .reveal .slide h1 {
-  font-size: 1.65em;
+  font-size: $presentation-h1-font-size;
   font-weight: 700;
 }
 
@@ -127,7 +133,7 @@ $code-bg: $altmejd-code-bg !default;
   position: relative;
   margin-bottom: 0.8em;
   padding-bottom: #{$altmejd-heading-rule-pad}em;
-  font-size: #{$altmejd-heading-scale}em;
+  font-size: $presentation-h2-font-size;
   line-height: $altmejd-heading-line-height;
 }
 
@@ -146,11 +152,42 @@ $code-bg: $altmejd-code-bg !default;
 }
 
 .reveal .slide h3 {
+  margin-bottom: 0.5em;
   color: var(--altmejd-primary);
-  font-size: 0.84em;
+  font-size: $presentation-h3-font-size;
   font-weight: 650;
   letter-spacing: 0.035em;
   text-transform: uppercase;
+}
+
+// Keep prose groups distinct without changing the margins inside figures,
+// callouts, notes, or other components with their own layout.
+.reveal .slide > p:not(.caption):not(:has(img)),
+.reveal .slide .columns:not(.figure-panels) > .column > p:not(.caption):not(:has(img)) {
+  margin-block: 0.65em;
+}
+
+.reveal .slide > :is(p, ul, ol) + h3 {
+  margin-top: 1.1em;
+}
+
+// The heading supplies this gap; list and first-item margins must not stack
+// on top of it and visually detach the label from its content.
+.reveal .slide h3 + :is(ul, ol),
+.reveal .slide h3 + :is(ul, ol) > li:first-child {
+  margin-top: 0;
+}
+
+// Quarto restores Pandoc's inline columns container. Its vertical margins
+// then have no effect, even when computed styles report a positive margin.
+// A flow root contains both columns while preserving authored column widths.
+.reveal .slide .columns:not(.figure-panels) {
+  display: flow-root;
+  margin-bottom: 0.8em;
+}
+
+.reveal .slide > :is(p, ul, ol) + .columns:not(.figure-panels) {
+  margin-block-start: 1.2em;
 }
 
 .reveal .slide strong {
@@ -378,7 +415,7 @@ $code-bg: $altmejd-code-bg !default;
 
 .reveal .slide table th,
 .reveal .slide table td {
-  padding: 0.16em 0.32em;
+  padding: 0.34em 0.4em;
   border-color: var(--altmejd-border);
 }
 
@@ -1160,10 +1197,12 @@ $code-bg: $altmejd-code-bg !default;
   align-items: center;
   column-gap: 0.16em;
   box-sizing: border-box;
-  min-height: max(32px, calc(32px / var(--altmejd-scale, 1)));
+  // These are part of the slide canvas. The separate mobile toolbar keeps
+  // screen-sized touch targets; compensating here makes small slides top-heavy.
+  min-height: 36px;
   padding: 0.32em 0.65em;
   color: var(--altmejd-primary);
-  font-size: max(18px, calc(14px / var(--altmejd-scale, 1)));
+  font-size: 18px;
   font-weight: 560;
   line-height: 1.15;
   text-decoration: none;
@@ -1485,6 +1524,16 @@ html.altmejd-handout .reveal .slide.has-handout-notes {
   --altmejd-handout-note-reserve: calc(
     var(--altmejd-handout-note-height, 0px) + #{$altmejd-gap}
   );
+}
+
+// Speaker notes use part of the artboard. Retain compact table and prose
+// spacing there so a table's following text still clears the note area.
+html.altmejd-handout .reveal .slide.has-handout-notes table :is(th, td) {
+  padding: 0.16em 0.32em;
+}
+
+html.altmejd-handout .reveal .slide.has-handout-notes > p:not(.caption):not(:has(img)) {
+  margin-block: var(--r-block-margin);
 }
 
 html.altmejd-handout .reveal .slide.has-handout-notes > .aside,
