@@ -222,6 +222,68 @@ try {
     "none",
   );
 
+  const readerNavigation = [];
+  const returnToSlides = async (id, params, label) => {
+    const reader = await page.evaluate((target) => {
+      const slide = document.getElementById(target);
+      return {
+        hash: location.hash,
+        params: Object.fromEntries(new URLSearchParams(location.search)),
+        top: slide.getBoundingClientRect().top,
+        viewportHeight: innerHeight,
+      };
+    }, id);
+    assert.equal(reader.hash, `#${id}`, label);
+    assert.deepEqual(reader.params, { ...params, reading: "true" }, label);
+    assert.ok(reader.top >= 0 && reader.top < reader.viewportHeight / 2, label);
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: "networkidle0" }),
+      page.locator(".altmejd-reader-toolbar a").click(),
+    ]);
+    await page.waitForFunction(() => globalThis.Reveal?.isReady());
+    const presentation = await page.evaluate(() => ({
+      id: globalThis.Reveal.getCurrentSlide().id,
+      params: Object.fromEntries(new URLSearchParams(location.search)),
+    }));
+    assert.equal(presentation.id, id, label);
+    assert.deepEqual(presentation.params, params, label);
+    readerNavigation.push(label);
+  };
+  for (const mobile of [false, true]) {
+    await page.setViewport(mobile ? { width: 375, height: 812 } : { width: 1280, height: 720 });
+    for (const handout of [false, true]) {
+      const params = { source: "reader / + &", ...(handout ? { handout: "true" } : {}) };
+      for (const id of ["fixed-height-aside", "backup-detail"]) {
+        const label = `${mobile ? "mobile" : "desktop"}/${handout ? "handout" : "normal"}/${id}`;
+        await open(fixturePath, params, "#/fixed-image-aside");
+        await show(id);
+        let selector = ".altmejd-read-link";
+        if (!mobile) {
+          await page.locator(".slide-menu-button a").click();
+          await page.locator('.slide-menu-toolbar [data-panel="Custom0"]').click();
+          selector = '.slide-menu-panel.active-menu-panel a[href*="reading=true"]';
+        }
+        assert.equal(await page.$eval(selector, (link) => link.textContent), "Read slides");
+        await Promise.all([
+          page.waitForNavigation({ waitUntil: "networkidle0" }),
+          page.locator(selector).click(),
+        ]);
+        await page.waitForFunction(
+          () => document.documentElement.dataset.altmejdReaderReady === "true",
+        );
+        await returnToSlides(id, params, label);
+      }
+    }
+  }
+  const { h, v } = await page.evaluate(() =>
+    globalThis.Reveal.getIndices(document.getElementById("backup-detail")),
+  );
+  for (const hash of ["#backup-detail", "#/backup-detail", `#/${h}/${v}`]) {
+    const params = { source: "direct deep link" };
+    await open(fixturePath, { ...params, reading: "true" }, hash);
+    await returnToSlides("backup-detail", params, `deep link ${hash}`);
+  }
+
   for (const handout of [false, true]) {
     await open(
       fixturePath,
@@ -347,6 +409,7 @@ try {
       contrast,
       menuContrast,
       mobile,
+      readerNavigation,
       readerShowcase,
       chromeSizes,
       preflightIssues: preflight.issues.length,

@@ -193,10 +193,6 @@
       return;
     }
 
-    // Reveal 5.1 enables scroll view below 435 px, but Quarto's vertical
-    // section stacks are not valid scroll pages. Keep the scaled slide canvas
-    // on phones until Quarto exposes a reliable format-level override.
-    window.Reveal.configure({ scrollActivationWidth: 0 });
     if (reading) return;
 
     const updateCanvasScale = () => {
