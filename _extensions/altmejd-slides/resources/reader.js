@@ -8,8 +8,12 @@
 
   const modeUrl = (enabled) => {
     const url = new URL(location.href);
-    if (enabled) url.searchParams.set("reading", "true");
-    else {
+    if (enabled) {
+      url.searchParams.set("reading", "true");
+      // Reveal emits slidechanged before updating location.hash.
+      const slideId = window.Reveal?.getCurrentSlide()?.id;
+      if (slideId) url.hash = `#/${slideId}`;
+    } else {
       url.searchParams.delete("reading");
       if (url.hash && !url.hash.startsWith("#/")) url.hash = `#/${url.hash.slice(1)}`;
     }
