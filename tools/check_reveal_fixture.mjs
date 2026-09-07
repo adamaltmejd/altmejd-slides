@@ -328,7 +328,7 @@ try {
       bundledKatex:
         mathElements.length >= 2 &&
         mathSizes.every((math) => math.width > 0 && math.height > 0) &&
-        globalThis.katex?.version === "0.18.4",
+        globalThis.katex?.version === "0.18.7",
       mathCount: mathElements.length,
       mathNavDocked:
         Math.abs(mathNavDockRect.right - mathSlideRect.right) < 2 &&

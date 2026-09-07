@@ -11,7 +11,7 @@ permissions:
 
 env:
   QUARTO_VERSION: "1.10.18"
-  BUN_VERSION: "1.4.0"
+  BUN_VERSION: "1.4.2"
 
 jobs:
   validate:
@@ -32,7 +32,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.12.5"
+          version: "0.12.10"
           enable-cache: true
 
       - name: Check source and unit tests
