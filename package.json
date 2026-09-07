@@ -1,6 +1,6 @@
 {
   "name": "altmejd-slides",
-  "version": "0.7.4",
+  "version": "0.7.5",
   "private": true,
   "description": "A customizable Quarto Reveal format for research and teaching presentations",
   "license": "MIT",

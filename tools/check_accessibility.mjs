@@ -59,18 +59,28 @@ try {
   await page.setViewport({ width: 1280, height: 720 });
   await open(fixturePath);
   await show("merged-navigation");
-  const targets = await page.$$eval("#merged-navigation .slide-nav a", (links) =>
-    links
-      .filter((link) => link.getClientRects().length)
-      .map((link) => ({
-        height: link.getBoundingClientRect().height,
-        font: Number.parseFloat(getComputedStyle(link).fontSize) * globalThis.Reveal.getScale(),
-      })),
-  );
-  assert.ok(
-    targets.every((target) => target.height >= 31.9 && target.font >= 13.9),
-    JSON.stringify(targets),
-  );
+  const navigationSizes = () =>
+    page.$$eval("#merged-navigation .slide-nav a", (links) =>
+      links
+        .filter((link) => link.getClientRects().length)
+        .map((link) => ({
+          height: link.getBoundingClientRect().height,
+          font: Number.parseFloat(getComputedStyle(link).fontSize) * globalThis.Reveal.getScale(),
+        })),
+    );
+  const targets = await navigationSizes();
+  await page.setViewport({ width: 1920, height: 1080 });
+  await show("merged-navigation");
+  const wideTargets = await navigationSizes();
+  assert.equal(wideTargets.length, targets.length);
+  for (const [index, target] of targets.entries()) {
+    const wide = wideTargets[index];
+    assert.ok(target.height > 0 && target.font > 0);
+    assert.ok(Math.abs(wide.height / target.height - 1.5) < 0.01, JSON.stringify({ target, wide }));
+    assert.ok(Math.abs(wide.font / target.font - 1.5) < 0.01, JSON.stringify({ target, wide }));
+  }
+  await page.setViewport({ width: 1280, height: 720 });
+  await show("merged-navigation");
   await page.focus("#merged-navigation .slide-nav a");
   for (let index = 0; index < 12; index++) {
     await page.keyboard.press("Tab");

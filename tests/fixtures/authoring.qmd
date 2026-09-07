@@ -122,6 +122,85 @@ A live-only speaker cue that must be absent from handouts.
 :::
 ::::
 
+## Text columns keep their surrounding space {#text-column-spacing}
+
+A shared question stays separate from the two groups below.
+
+:::: {.columns}
+::: {.column width="30%"}
+### First group
+
+- A first point.
+- Another point.
+:::
+::: {.column width="70%"}
+### Second group
+
+A longer explanation belongs to the second group and can wrap independently.
+
+This paragraph adds detail within the same group.
+:::
+::::
+
+This paragraph starts below both columns.
+
+## Prose and tables have room to read {#prose-table-spacing}
+
+The first paragraph introduces the comparison.
+
+The next paragraph develops the same question.
+
+### A separate part of the argument
+
+| Group | Estimate | Interval |
+|:------|---------:|:---------|
+| First | 0.18 | 0.10–0.26 |
+| Second | 0.12 | 0.04–0.20 |
+
+## Normal heading sizes {#normal-heading-sizing}
+
+```{=html}
+<h1>Level-one content heading</h1>
+```
+
+### Level-three content heading
+
+Body text sets the reference size.
+
+## Smaller body, stable headings {#smaller-heading-sizing .smaller}
+
+```{=html}
+<h1>Level-one content heading</h1>
+```
+
+### Level-three content heading
+
+Only the body text should become smaller.
+
+## Tables leave room for handout notes {#handout-table-spacing}
+
+| Measure | Definition |
+|:--------|:-----------|
+| Prior score | Recorded before eligibility was assigned.<br>Standardized within each application round. |
+| Completed courses | Courses passed during the first two terms.<br>Counted using a common registration window. |
+| Study time | Weekly hours reported before the offer.<br>Grouped using the same baseline questionnaire. |
+| Travel distance | Distance from the recorded home to campus.<br>Measured before the start of the first term. |
+
+Every measure uses the same synthetic sample.
+
+::: {.aside}
+Source: synthetic records prepared for the layout fixture.<br>
+Definitions remain visible in both delivery modes.
+:::
+
+::: notes
+Introduce the measures before discussing estimates.<br>
+Explain that the score predates the eligibility decision.<br>
+Keep the course registration window consistent across groups.<br>
+Distinguish reported study time from observed course completion.<br>
+Remind readers that these records are entirely synthetic.
+:::
+
 # Second section
 
 ACCESSIBLE NAVIGATION AND CLICKABLE QR CODES

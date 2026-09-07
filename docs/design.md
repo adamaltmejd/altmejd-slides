@@ -43,6 +43,40 @@ headings and emphasis, 680 author names and statements, 740 display (title,
 stats), against 400 body. Display sizes tighten letter-spacing (−0.02 to
 −0.035 em); uppercase kickers open it (+0.06 to +0.075 em).
 
+Ordinary h1/h2/h3 sizes also set Quarto's native heading variables. This
+keeps headings at 66 / 51.2 / 33.6px when `.smaller` reduces body text from
+40 to 28px. The same rule applies to slide-level and deck-level `smaller`;
+custom `$altmejd-heading-scale` values remain consistent in both modes.
+
+## Spacing
+
+Ordinary paragraphs use `0.65em` block margins. A paragraph or list followed
+by text columns gets a larger `1.2em` gap, and columns leave `0.8em` below
+their tallest child. At the default 40px body size these are 26, 48, and
+32px. Native percentage column widths stay intact.
+
+Subheadings stay close to their content: `0.5em` below an `h3`, without
+stacked list or first-item top margins. A subheading after top-level prose
+or a list starts a new group with `1.1em` above it. Tables use `0.34em`
+vertical and `0.4em` horizontal cell padding so adjacent rows stay distinct.
+When speaker notes are shown in handout mode, tables retain compact
+`0.16em` / `0.32em` padding and top-level prose uses Reveal's block margin
+to leave room for the notes. Slides without speaker notes remain airy.
+
+These defaults govern ordinary content. Figure panels, title slides,
+callouts, captions, notes, and navigation retain their component spacing.
+Use the available slide area for readable groups; dense source tables and
+small labels embedded in figures still need author attention.
+
+## Navigation sizing
+
+In-slide navigation uses 18px labels and a 36px minimum height in slide
+coordinates. It scales with the rest of the slide, including in PDF mode.
+On narrow screens, the separate navigation toolbar and reading controls
+retain 16px labels and at least 44px touch targets outside the slide canvas.
+Use the normal presentation URL for responsive previews; `?pdf=true`
+intentionally suppresses those mobile controls for export.
+
 ## Component inventory
 
 One artboard per row when seeding a design canvas.
