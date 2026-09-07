@@ -1,6 +1,6 @@
 {
   "name": "altmejd-slides",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "private": true,
   "description": "A customizable Quarto Reveal format for research and teaching presentations",
   "license": "MIT",
@@ -8,7 +8,7 @@
     "check": "bun run lint && bun run lint:py && bun run test && bun run test:ts",
     "format": "biome check --write .",
     "lint": "biome check .",
-    "lint:py": "uvx --no-config 'ruff==0.16.4' check tools _extensions/altmejd-slides/tools/pdf && uvx --no-config 'ruff==0.16.4' format --check tools _extensions/altmejd-slides/tools/pdf",
+    "lint:py": "uvx --no-config 'ruff==0.16.6' check tools _extensions/altmejd-slides/tools/pdf && uvx --no-config 'ruff==0.16.6' format --check tools _extensions/altmejd-slides/tools/pdf",
     "test": "python3 -m unittest discover -s tools/tests -p 'test_*.py'",
     "test:ts": "bun test tools/tests",
     "test:publish": "bash tools/test_publish_integration.sh",
@@ -17,8 +17,8 @@
     "pdf:examples": "python3 tools/render_revealjs_pdfs.py --site-dir _site --glob 'examples/*.html' --output-dir output/pdf"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.9",
-    "katex": "0.18.4",
+    "@biomejs/biome": "2.5.12",
+    "katex": "0.18.7",
     "puppeteer-core": "24.40.0"
   },
   "trustedDependencies": [],

@@ -228,7 +228,7 @@ local function read_metadata(meta)
 
   quarto.doc.add_html_dependency({
     name = "altmejd-slides-runtime",
-    version = "0.7.3",
+    version = "0.7.4",
     scripts = { "resources/runtime.js", "resources/reader.js", "resources/preflight.js" },
     stylesheets = { "resources/reader.css" },
   })
@@ -236,19 +236,19 @@ local function read_metadata(meta)
   -- never depend on host-installed fonts.
   quarto.doc.add_html_dependency({
     name = "altmejd-slides-fonts",
-    version = "0.7.3",
+    version = "0.7.4",
     stylesheets = { "resources/fonts/fonts.css" },
   })
   if bundled_math then
     quarto.doc.add_html_dependency({
       name = "altmejd-slides-katex",
-      version = "0.18.4",
+      version = "0.18.7",
       scripts = { "resources/katex/katex.min.js" },
       stylesheets = { "resources/katex/katex.min.css" },
     })
     quarto.doc.add_html_dependency({
       name = "altmejd-slides-math",
-      version = "0.7.3",
+      version = "0.7.4",
       scripts = { "resources/math.js" },
     })
   end

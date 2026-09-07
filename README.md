@@ -29,7 +29,7 @@ quarto update adamaltmejd/altmejd-slides
 Pin a deck to a released extension when reproducibility matters:
 
 ```sh
-quarto add adamaltmejd/altmejd-slides@v0.7.3
+quarto add adamaltmejd/altmejd-slides@v0.7.4
 ```
 
 The lean starter lives in [`template.qmd`](template.qmd). Its defaults are
@@ -128,7 +128,7 @@ broken images, and broken internal links. Use `?handout=true&check=true` to
 check the handout too. It checks these specific conditions; visual review and
 judgment about content and accessibility still matter.
 
-The format bundles Schibsted Grotesk, JetBrains Mono, and KaTeX 0.18.4. Text and
+The format bundles Schibsted Grotesk, JetBrains Mono, and KaTeX 0.18.7. Text and
 math therefore need no font or renderer CDN. To select a different math
 renderer, set `altmejd-slides.math: false` and choose Quarto's
 `html-math-method`.
