@@ -170,9 +170,249 @@ export function routePatterns(host: string, slug: string): string[] {
   return [`${host}/${slug}`, `${host}/${slug}/*`];
 }
 
-const REF_ATTRIBUTE =
-  /\s(?:src|href|data-src|poster|data-background-image|data-background-video|data-background-iframe)\s*=\s*("[^"]*"|'[^']*')/gi;
-const SRCSET_ATTRIBUTE = /\s(?:srcset|data-srcset)\s*=\s*("[^"]*"|'[^']*')/gi;
+const REF_ATTRIBUTES = new Set([
+  "src",
+  "href",
+  "data-src",
+  "poster",
+  "data-background-image",
+  "data-background-video",
+  "data-background-iframe",
+]);
+const SRCSET_ATTRIBUTES = new Set(["srcset", "data-srcset"]);
+const RAW_TEXT_ELEMENTS = new Set([
+  "script",
+  "style",
+  "textarea",
+  "title",
+  "xmp",
+  "iframe",
+  "noembed",
+  "noframes",
+  "noscript", // Reveal decks run with scripting enabled.
+]);
+const HTML_SPACE = /[\t\n\f\r ]/;
+const HTML_VOID_ELEMENTS = new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "param",
+  "source",
+  "track",
+  "wbr",
+]);
+
+interface ValueSpan {
+  start: number;
+  end: number;
+}
+
+interface HtmlAttribute extends ValueSpan {
+  name: string;
+}
+
+// Read attribute value offsets, never matching attribute-like text inside a
+// different value. An unfinished tag is not emitted by the HTML tokenizer.
+function readHtmlTag(html: string, start: number) {
+  const name = /<\/?([a-zA-Z][^\t\n\f\r />]*)/y;
+  name.lastIndex = start;
+  const match = name.exec(html);
+  if (match === null) return null;
+  let pos = name.lastIndex;
+  const attributes: HtmlAttribute[] = [];
+  const seen = new Set<string>();
+  while (pos < html.length) {
+    const separatorStart = pos;
+    while (HTML_SPACE.test(html[pos]) || html[pos] === "/") pos++;
+    if (html[pos] === ">") {
+      return {
+        name: match[1].toLowerCase(),
+        end: pos + 1,
+        attributes,
+        selfClosing: pos > separatorStart && html[pos - 1] === "/",
+      };
+    }
+    if (pos >= html.length) break;
+    const nameStart = pos++;
+    while (pos < html.length && !/[\t\n\f\r /=>]/.test(html[pos])) pos++;
+    const attributeName = html.slice(nameStart, pos).toLowerCase();
+    while (HTML_SPACE.test(html[pos])) pos++;
+    if (html[pos] === "=") {
+      pos++;
+      while (HTML_SPACE.test(html[pos])) pos++;
+      const quote = html[pos];
+      let valueStart = pos;
+      let valueEnd: number;
+      if (quote === '"' || quote === "'") {
+        valueStart = ++pos;
+        valueEnd = html.indexOf(quote, pos);
+        if (valueEnd === -1) return null;
+        pos = valueEnd + 1;
+      } else {
+        while (pos < html.length && !/[\t\n\f\r >]/.test(html[pos])) pos++;
+        valueEnd = pos;
+      }
+      if (!seen.has(attributeName)) {
+        attributes.push({ name: attributeName, start: valueStart, end: valueEnd });
+      }
+    }
+    seen.add(attributeName);
+  }
+  return null;
+}
+
+function rawTextEnd(html: string, name: string, start: number): number {
+  if (name !== "script") {
+    const close = new RegExp(`</${name}(?=[\\t\\n\\f\\r />])`, "gi");
+    close.lastIndex = start;
+    return close.exec(html)?.index ?? html.length;
+  }
+  // In legacy comment-wrapped scripts, <script> can double-escape the body:
+  // the next </script> then returns to escaped script data instead of closing.
+  const tokens = /<!--|-->|<\/?script(?=[\t\n\f\r />])/gi;
+  tokens.lastIndex = start;
+  let state: "data" | "escaped" | "double-escaped" = "data";
+  for (let token = tokens.exec(html); token !== null; token = tokens.exec(html)) {
+    const text = token[0].toLowerCase();
+    if (text === "<!--" && state === "data") state = "escaped";
+    else if (text === "-->") state = "data";
+    else if (text === "<script" && state === "escaped") state = "double-escaped";
+    else if (text === "</script") {
+      if (state !== "double-escaped") return token.index;
+      state = "escaped";
+    }
+  }
+  return html.length;
+}
+
+// Scan rendered HTML without serializing it: only real opening-tag attributes
+// may change. Comments, raw text, and all intervening bytes stay untouched.
+function* htmlAttributes(html: string): Generator<HtmlAttribute> {
+  // Foreign elements have different text and self-closing rules. Track their
+  // nesting and HTML integration points (e.g. SVG foreignObject), so an inline
+  // <svg><style/></svg> cannot consume the HTML following it as raw text.
+  const elements: { name: string; namespace: string; htmlChildren: boolean }[] = [];
+  let pos = 0;
+  while (pos < html.length) {
+    pos = html.indexOf("<", pos);
+    if (pos === -1) return;
+    if (html.startsWith("<!--", pos)) {
+      const end = /--!?>/g;
+      end.lastIndex = pos + 4;
+      if (html[pos + 4] === ">") pos += 5;
+      else if (html.startsWith("->", pos + 4)) pos += 6;
+      else pos = end.exec(html) === null ? html.length : end.lastIndex;
+      continue;
+    }
+    if (
+      html.startsWith("<![CDATA[", pos) &&
+      elements.length > 0 &&
+      elements.at(-1)?.namespace !== "html"
+    ) {
+      const end = html.indexOf("]]>", pos + 9);
+      pos = end === -1 ? html.length : end + 3;
+      continue;
+    }
+    if (
+      /^<[!?]/.test(html.slice(pos, pos + 2)) ||
+      (html.startsWith("</", pos) && !/[a-zA-Z>]/.test(html[pos + 2] ?? ""))
+    ) {
+      const end = html.indexOf(">", pos + 2);
+      pos = end === -1 ? html.length : end + 1;
+      continue;
+    }
+    if (!/^<\/?[a-zA-Z]/.test(html.slice(pos, pos + 3))) {
+      pos++;
+      continue;
+    }
+    const closing = html[pos + 1] === "/";
+    const tag = readHtmlTag(html, pos);
+    if (tag === null) return;
+    pos = tag.end;
+    if (closing) {
+      const index = elements.findLastIndex((element) => element.name === tag.name);
+      if (index !== -1) elements.length = index;
+      continue;
+    }
+    yield* tag.attributes;
+    const parent = elements.at(-1);
+    let namespace = parent?.namespace ?? "html";
+    if (
+      parent?.htmlChildren &&
+      !(
+        parent.namespace === "math" &&
+        parent.name !== "annotation-xml" &&
+        ["mglyph", "malignmark"].includes(tag.name)
+      )
+    ) {
+      namespace = "html";
+    }
+    if (
+      (namespace === "html" && (tag.name === "svg" || tag.name === "math")) ||
+      (parent?.namespace === "math" && parent.name === "annotation-xml" && tag.name === "svg")
+    ) {
+      namespace = tag.name;
+    }
+    const htmlChildren =
+      (namespace === "svg" && ["foreignobject", "desc", "title"].includes(tag.name)) ||
+      (namespace === "math" &&
+        (["mi", "mo", "mn", "ms", "mtext"].includes(tag.name) ||
+          (tag.name === "annotation-xml" &&
+            tag.attributes.some(
+              (attr) =>
+                attr.name === "encoding" &&
+                /^(text\/html|application\/xhtml\+xml)$/i.test(html.slice(attr.start, attr.end)),
+            ))));
+    if (namespace === "html") {
+      if (!HTML_VOID_ELEMENTS.has(tag.name)) elements.push({ ...tag, namespace, htmlChildren });
+      if (tag.name === "plaintext") return;
+      if (RAW_TEXT_ELEMENTS.has(tag.name)) pos = rawTextEnd(html, tag.name, pos);
+    } else if (!tag.selfClosing) {
+      elements.push({ ...tag, namespace, htmlChildren });
+    }
+  }
+}
+
+// A srcset URL ends at whitespace, not at an internal comma (e.g. data URLs).
+// Trailing commas end candidates; commas in parenthesized descriptors do not.
+function* srcsetUrls(value: string): Generator<ValueSpan> {
+  let pos = 0;
+  while (pos < value.length) {
+    while (HTML_SPACE.test(value[pos]) || value[pos] === ",") pos++;
+    const start = pos;
+    while (pos < value.length && !HTML_SPACE.test(value[pos])) pos++;
+    let end = pos;
+    while (end > start && value[end - 1] === ",") end--;
+    if (end > start) yield { start, end };
+    if (end < pos) continue;
+    let parentheses = false;
+    while (pos < value.length) {
+      const char = value[pos++];
+      if (char === "," && !parentheses) break;
+      if (char === "(") parentheses = true;
+      if (char === ")") parentheses = false;
+    }
+  }
+}
+
+function* assetRefSpans(html: string): Generator<ValueSpan> {
+  for (const attribute of htmlAttributes(html)) {
+    if (REF_ATTRIBUTES.has(attribute.name)) {
+      yield attribute;
+    } else if (SRCSET_ATTRIBUTES.has(attribute.name)) {
+      for (const span of srcsetUrls(html.slice(attribute.start, attribute.end))) {
+        yield { start: attribute.start + span.start, end: attribute.start + span.end };
+      }
+    }
+  }
+}
 
 function isLocalRelative(ref: string): boolean {
   if (ref === "" || ref.startsWith("#") || ref.startsWith("/") || ref.startsWith("\\")) {
@@ -218,13 +458,8 @@ export function collectAssetRefs(html: string): string[] {
       refs.add(ref);
     }
   };
-  for (const match of html.matchAll(REF_ATTRIBUTE)) {
-    add(match[1].slice(1, -1));
-  }
-  for (const match of html.matchAll(SRCSET_ATTRIBUTE)) {
-    for (const candidate of match[1].slice(1, -1).split(",")) {
-      add(candidate.trim().split(/\s+/, 1)[0]);
-    }
+  for (const span of assetRefSpans(html)) {
+    add(html.slice(span.start, span.end));
   }
   return [...refs].sort();
 }
@@ -250,23 +485,18 @@ export function rebaseAssetRefs(html: string, entryPath: string): string {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
   };
-  const attributes = html.replace(REF_ATTRIBUTE, (match, quoted: string) =>
-    match.replace(quoted, `${quoted[0]}${rebase(quoted.slice(1, -1))}${quoted[0]}`),
-  );
-  return attributes.replace(SRCSET_ATTRIBUTE, (match, quoted: string) => {
-    const value = quoted.slice(1, -1);
-    // Data URLs contain commas. Quarto embeds these without local candidates.
-    if (value.trim().startsWith("data:")) {
-      return match;
+  const parts: string[] = [];
+  let copied = 0;
+  for (const span of assetRefSpans(html)) {
+    const value = html.slice(span.start, span.end);
+    const rebased = rebase(value);
+    if (rebased !== value) {
+      parts.push(html.slice(copied, span.start), rebased);
+      copied = span.end;
     }
-    const rebased = value
-      .split(",")
-      .map((candidate) =>
-        candidate.replace(/^(\s*)(\S+)/, (_match, space, url) => `${space}${rebase(url)}`),
-      )
-      .join(",");
-    return match.replace(quoted, `${quoted[0]}${rebased}${quoted[0]}`);
-  });
+  }
+  parts.push(html.slice(copied));
+  return parts.join("");
 }
 
 const CSS_URL = /url\(\s*("[^"]*"|'[^']*'|[^"')][^)]*)\s*\)/gi;

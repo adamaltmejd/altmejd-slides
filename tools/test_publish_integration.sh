@@ -373,6 +373,73 @@ grep -q 'src="site_libs/revealjs/' "$nested_public/index.html" || fail "shared l
 grep -q 'data-src="talks/assets/dot.svg"' "$nested_public/index.html" || fail "figure URL not rebased"
 test ! -s "$FAKE_WRANGLER_LOG" || fail "stage-only contacted Wrangler"
 
+# Self-contained Reveal embeds HTML templates in JavaScript. Staging must
+# neither collect template URLs nor rewrite any bytes in the root entry.
+embedded_proj="$work_dir/embedded-proj"
+mkdir -p "$embedded_proj"
+cat >"$embedded_proj/talk.qmd" <<'QMD'
+---
+title: "Self-contained Fixture"
+format:
+  revealjs:
+    embed-resources: true
+---
+
+## One
+
+![](dot.svg)
+
+```{=html}
+<!-- <img src="comment-only.png"> -->
+<script>const template = `<iframe src="${e}"></iframe>`;</script>
+```
+QMD
+cp "$deck_dir/assets/dot.svg" "$embedded_proj/dot.svg"
+(cd "$embedded_proj" &&
+  quarto run "$publisher" --stage-only --slug embedded26 --staging-dir "$embedded_proj/staging") ||
+  fail "self-contained staging failed"
+cmp "$embedded_proj/talk.html" "$embedded_proj/staging/public/embedded26/index.html" ||
+  fail "self-contained entry bytes changed during staging"
+python3 - "$embedded_proj/staging/staged-files.json" <<'PY' || fail "self-contained deck staged unexpected assets"
+import json, sys
+files = json.load(open(sys.argv[1]))["files"]
+assert {f["path"] for f in files} == {"_headers", "embedded26/index.html"}, files
+PY
+test ! -s "$FAKE_WRANGLER_LOG" || fail "self-contained stage-only contacted Wrangler"
+
+# Real HTML references still fail preflight for missing files and escapes.
+invalid_proj="$work_dir/invalid-proj"
+mkdir -p "$invalid_proj"
+for ref in missing.png ../outside.png; do
+  cat >"$invalid_proj/talk.qmd" <<QMD
+---
+title: "Invalid Reference Fixture"
+format: revealjs
+---
+
+## One
+
+\`\`\`{=html}
+<script>const template = '<img src="ignored.png">';</script>
+<IMG title='example src="ignored-too.png" >' SRC="$ref">
+\`\`\`
+QMD
+  if (cd "$invalid_proj" &&
+    quarto run "$publisher" --stage-only --slug invalid26 --staging-dir "$invalid_proj/staging") \
+    >"$work_dir/invalid-reference.log" 2>&1; then
+    fail "invalid reference $ref passed staging preflight"
+  fi
+  if [ "$ref" = missing.png ]; then
+    grep -q 'referenced file is missing: .*missing.png' "$work_dir/invalid-reference.log" ||
+      fail "missing reference failure lacked a clear message"
+  else
+    grep -q 'references leave the output directory' "$work_dir/invalid-reference.log" ||
+      fail "path traversal failure lacked a clear message"
+  fi
+  test ! -f "$invalid_proj/staging/staged-files.json" || fail "failed staging kept a stale manifest"
+done
+test ! -s "$FAKE_WRANGLER_LOG" || fail "invalid reference preflight contacted Wrangler"
+
 # A configured artifact whose source is missing must fail loudly.
 rm "$outdir_proj/slides-src.pdf"
 if (cd "$outdir_proj" &&
