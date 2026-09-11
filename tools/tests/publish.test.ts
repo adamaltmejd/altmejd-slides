@@ -6,7 +6,6 @@ import {
   collectCssRefs,
   deckWranglerConfig,
   deriveZone,
-  gatewayWranglerConfig,
   headersFileContent,
   planStaging,
   publicUrl,
@@ -175,12 +174,6 @@ describe("worker naming and routes", () => {
       { pattern: "slides.altmejd.se/x1", zone_name: "altmejd.se" },
       { pattern: "slides.altmejd.se/x1/*", zone_name: "altmejd.se" },
     ]);
-  });
-
-  test("gateway config claims the host as a custom domain", () => {
-    const config = gatewayWranglerConfig("slides.altmejd.se", "altmejd.se");
-    expect(config.name).toBe("altmejd-slides-gateway");
-    expect(config.routes).toEqual([{ pattern: "slides.altmejd.se", custom_domain: true }]);
   });
 
   test("public URL always carries a trailing slash", () => {

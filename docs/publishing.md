@@ -9,9 +9,10 @@ is run deliberately.
 ## Architecture
 
 - One small **gateway Worker** (`altmejd-slides-gateway`) owns the host as a
-  Cloudflare Custom Domain. It redirects bare `/slug` to `/slug/` and answers
-  404 for everything unpublished. Deploying it creates the DNS record for the
-  host; it never touches other records.
+  Cloudflare Custom Domain. It lists published decks at `/`, redirects bare
+  `/slug` to `/slug/`, and answers 404 for other unpublished paths. The gateway
+  is deployed separately from this repository. Deploying its Custom Domain
+  creates the DNS record for the configured host.
 - Each talk is an independent **Static Assets Worker** named
   `altmejd-slides-<slug>` with two zone routes: `host/<slug>` and
   `host/<slug>/*`. Zone routes take precedence over the gateway's Custom
@@ -27,25 +28,104 @@ available per talk.
 
 ## One-time gateway setup
 
-From any deck configured with the host (or with explicit flags):
+Keep one checkout of this format repository as the gateway's deployment home.
+Its configuration is independent of individual deck projects. From that checkout:
 
 ```sh
-make bootstrap-gateway
+cp gateway/wrangler.example.jsonc gateway/wrangler.jsonc
 ```
 
-or directly:
+Edit `gateway/wrangler.jsonc` for your Cloudflare account and domain:
+
+| Setting | Value |
+| --- | --- |
+| `name` | Gateway Worker name. Keep `altmejd-slides-gateway` when upgrading the existing gateway; use a distinct name for each additional host in the same account. |
+| `account_id` | The Cloudflare account containing your deck Workers and zone. |
+| `routes[0].pattern` | Your hostname, such as `talks.example.org`, with `custom_domain: true`. |
+| `vars.PUBLISH_HOST` | The same hostname, without a scheme, port, or path. |
+| `vars.CLOUDFLARE_ZONE_ID` | The zone's ID from Cloudflare, not its name. |
+| `vars.INDEX_TITLE` | The homepage heading and browser title. |
+| `vars.WORKER_PREFIX` | Keep `altmejd-slides-` for this extension's publisher. This only configures discovery; it does not rename deck Workers. |
+
+The example uses `talks.example.org`; the gateway code contains no personal
+hostname. For `slides.altmejd.se`, set both hostname fields to that value and
+use the `altmejd.se` zone ID. The local `wrangler.jsonc` is ignored by Git;
+keep a backup of your deployment configuration.
+
+Create a dedicated Cloudflare API token with **Zone · Workers Routes · Read**,
+restricted to the selected zone. The gateway uses this token only to read the
+[route inventory](https://developers.cloudflare.com/api/resources/workers/subresources/routes/methods/list/).
+Store it as a Worker secret through Wrangler's interactive prompt:
 
 ```sh
-quarto run _extensions/adamaltmejd/altmejd-slides/tools/publish-cloudflare.ts \
-  --bootstrap-gateway --host slides.altmejd.se
+wrangler secret put CLOUDFLARE_API_TOKEN --config gateway/wrangler.jsonc
 ```
 
-This is idempotent: rerunning redeploys the same tiny gateway Worker and
-re-asserts the Custom Domain. It does not modify unrelated DNS records,
-routes, or Workers. After deploying, the bootstrap reports separately
-whether the custom domain already answers — the DNS record can take minutes
-to propagate, publishing works in the meantime, and a publish whose
-verification hits that window is safely retried by rerunning `make publish`.
+Use your deployment login or CI credentials to run Wrangler; the read-only
+token belongs in the gateway secret, not in your shell's deployment credentials.
+For a new Worker, Wrangler may ask to create it while setting the first secret.
+Review and deploy the gateway explicitly:
+
+```sh
+wrangler deploy --dry-run --config gateway/wrangler.jsonc
+wrangler deploy --config gateway/wrangler.jsonc
+```
+
+The Custom Domain must belong to the configured account. DNS and certificate
+activation can take time on the first deployment. This deploy replaces only
+the configured gateway; existing deck routes continue to serve their own
+Workers. Configure each deck with the same hostname:
+
+```yaml
+altmejd-slides:
+  publish:
+    cloudflare:
+      host: talks.example.org
+      zone: example.org
+```
+
+`make publish` and `make unpublish` stay project-local. Existing published decks
+are discovered automatically, including decks published with older extension
+versions. No backfill or republish is needed.
+
+### Upgrading the original gateway
+
+Use the existing gateway Worker name and Custom Domain in the new configuration.
+Retire `make bootstrap-gateway` in existing deck Makefiles. The current template
+target and publisher flag stop with setup guidance before doing any work.
+**Older installed copies still redeploy the old 404 gateway**; updating this
+repository cannot disable those copies. Replace their Makefile target with the
+current one, or remove it, before reusing that workflow. Ordinary old
+`make publish` and `make unpublish` commands do not touch the gateway.
+
+### Index behavior and validation
+
+The index includes canonical `host/<slug>/*` routes whose Worker name is exactly
+`WORKER_PREFIX + slug`. It excludes other hosts and unrelated Workers, then
+deduplicates and sorts the links. Labels are URL slugs; route discovery provides
+neither talk titles and dates nor an HTTP health check. Every matching published
+deck is listed publicly.
+
+Successful results stay fresh for five minutes. The gateway retains each result
+in the edge Cache API for up to 24 hours and can show it with a notice if a later
+refresh fails. Cache storage is local to each data center and may be evicted;
+this is a best-effort fallback, not durable storage. Without a usable result,
+an API or configuration failure returns 503, not an empty directory. A successful
+empty route inventory displays an explicit empty state. Unknown deck paths keep
+their existing redirects and 404s.
+
+Run `bun run check` for source checks and the mocked gateway tests. Validate the
+gateway bundle with the dry run above. Binding types are generated from the
+example configuration and kept separate from runtime type definitions:
+
+```sh
+wrangler types gateway/worker-configuration.d.ts \
+  --config gateway/wrangler.example.jsonc --include-runtime false --strict-vars false
+```
+
+The gateway intentionally calls the route management API: there is no runtime
+binding for enumerating the zone's deployed routes. It does not fetch deck HTML
+for labels or require a shared publishing registry.
 
 ## Project configuration
 
@@ -76,8 +156,9 @@ project with several QMD files must pick the deck with
   wrong one.
 - **CI**: set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. A
   least-privilege token needs Account · Workers Scripts · Edit and Zone ·
-  Workers Routes · Edit (plus Zone · DNS · Edit for the one-time gateway
-  bootstrap).
+  Workers Routes · Edit. Gateway Custom Domain setup additionally needs the
+  relevant zone DNS permissions. These deployment credentials are separate
+  from the gateway's zone-scoped read-only runtime secret.
 
 Tokens are read by wrangler itself; the publisher never stores or prints
 them. The non-secret account ID is stored with each publish record and pinned
@@ -134,7 +215,7 @@ or through absolute site-root URLs, still need a compatible relative asset
 layout; the publisher does not infer or rewrite them.
 
 If a deploy succeeds but the public URL cannot be verified (typically DNS
-still propagating after the first bootstrap), the publish exits non-zero but
+still propagating after the first gateway setup), the publish exits non-zero but
 records the deployment as `verification: pending`. Rerunning `make publish`
 later retries only the verification — it does not redeploy unchanged content
 and does not require `--adopt` for the Worker this project just created.

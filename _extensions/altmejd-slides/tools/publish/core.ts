@@ -3,7 +3,6 @@
 // (../publish-cloudflare.ts) supplies all filesystem and subprocess effects.
 
 export const WORKER_PREFIX = "altmejd-slides-";
-export const GATEWAY_WORKER = "altmejd-slides-gateway";
 export const COMPATIBILITY_DATE = "2026-08-01";
 export const DEFAULT_HOST = "slides.altmejd.se";
 
@@ -610,43 +609,6 @@ export function deckWorkerScript(slug: string): string {
     "export default {",
     "  fetch() {",
     `    return new Response("Not found in deck ${slug}.\\n", {`,
-    "      status: 404,",
-    '      headers: { "content-type": "text/plain; charset=utf-8" },',
-    "    });",
-    "  },",
-    "};",
-    "",
-  ].join("\n");
-}
-
-export function gatewayWranglerConfig(host: string, zone: string): Record<string, unknown> {
-  return {
-    name: GATEWAY_WORKER,
-    main: "worker.js",
-    compatibility_date: COMPATIBILITY_DATE,
-    workers_dev: false,
-    routes: [{ pattern: host, custom_domain: true }],
-    vars: { PUBLISH_HOST: host, PUBLISH_ZONE: zone },
-  };
-}
-
-// Fallback for requests no deck route claims: redirect bare /slug to /slug/
-// so an unpublished-then-published deck URL works, otherwise 404.
-export function gatewayWorkerScript(): string {
-  return [
-    "export default {",
-    "  fetch(request) {",
-    "    const url = new URL(request.url);",
-    '    if (url.pathname === "/") {',
-    '      return new Response("Nothing published at the root of this host.\\n", {',
-    "        status: 404,",
-    '        headers: { "content-type": "text/plain; charset=utf-8" },',
-    "      });",
-    "    }",
-    "    if (/^\\/[a-z0-9][a-z0-9-]*$/.test(url.pathname)) {",
-    '      return Response.redirect(url.origin + url.pathname + "/" + url.search, 308);',
-    "    }",
-    '    return new Response("No such talk.\\n", {',
     "      status: 404,",
     '      headers: { "content-type": "text/plain; charset=utf-8" },',
     "    });",

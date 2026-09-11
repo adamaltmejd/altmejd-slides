@@ -1,0 +1,18 @@
+{
+  "$schema": "https://unpkg.com/wrangler@4/config-schema.json",
+  "name": "altmejd-slides-gateway",
+  "account_id": "replace-with-your-account-id",
+  "main": "worker.ts",
+  "compatibility_date": "2026-09-10",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "talks.example.org", "custom_domain": true }],
+  "vars": {
+    "PUBLISH_HOST": "talks.example.org",
+    "CLOUDFLARE_ZONE_ID": "replace-with-your-zone-id",
+    "INDEX_TITLE": "Slides",
+    "WORKER_PREFIX": "altmejd-slides-"
+  },
+  "secrets": { "required": ["CLOUDFLARE_API_TOKEN"] },
+  "observability": { "enabled": true, "head_sampling_rate": 1 }
+}

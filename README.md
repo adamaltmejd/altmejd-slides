@@ -29,7 +29,7 @@ quarto update adamaltmejd/altmejd-slides
 Pin a deck to a released extension when reproducibility matters:
 
 ```sh
-quarto add adamaltmejd/altmejd-slides@v0.7.6
+quarto add adamaltmejd/altmejd-slides@v0.8.0
 ```
 
 The lean starter lives in [`template.qmd`](template.qmd). Its defaults are
@@ -55,7 +55,10 @@ make publish
 Each talk becomes its own Cloudflare Static Assets Worker behind a shared
 gateway domain, so republishing one talk never touches another, and rendering
 or previewing never deploys anything. After the talk, remove its Worker and
-routes with `make unpublish`. Setup, authentication, rollback, and the guarded
+routes with `make unpublish`. A separately deployed gateway can list published
+decks at the domain root by reading their Cloudflare routes. Both the deck
+publisher and the gateway support your own hostname.
+Setup, authentication, rollback, and the guarded
 unpublish workflow are documented in [docs/publishing.md](docs/publishing.md).
 
 ## Configure it

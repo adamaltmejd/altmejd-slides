@@ -275,18 +275,32 @@ assert patterns == [
 assert all(r["zone_name"] == "altmejd.se" for r in c["routes"])
 PY
 
-# --- gateway bootstrap ------------------------------------------------------
+# --- retired gateway bootstrap never stages or contacts Cloudflare ----------
 : >"$FAKE_WRANGLER_LOG"
-quarto run "$publisher" --bootstrap-gateway --host slides.example.test ||
-  fail "gateway bootstrap exited non-zero"
-gateway_config="$FAKE_WRANGLER_STATE/config-altmejd-slides-gateway.json"
-test -f "$gateway_config" || fail "gateway deploy did not run"
-python3 - "$gateway_config" <<'PY' || fail "gateway wrangler config is wrong"
-import json, sys
-c = json.load(open(sys.argv[1]))
-assert c["name"] == "altmejd-slides-gateway"
-assert c["routes"] == [{"pattern": "slides.example.test", "custom_domain": True}]
-PY
+retired_gateway_dir="$work_dir/retired-gateway"
+mkdir -p "$retired_gateway_dir"
+for mode in --keep-staging --stage-only; do
+  if (cd "$retired_gateway_dir" &&
+    quarto run "$publisher" --bootstrap-gateway --host slides.example.test \
+      "$mode" --staging-dir "$retired_gateway_dir/staging") \
+    >"$work_dir/gateway-retired.log" 2>&1; then
+    fail "retired gateway bootstrap succeeded with $mode"
+  fi
+  grep -q -- "--bootstrap-gateway is retired.*docs/publishing.md" \
+    "$work_dir/gateway-retired.log" ||
+    fail "retired gateway bootstrap did not explain central setup"
+  test ! -e "$retired_gateway_dir/staging" || fail "retired gateway bootstrap staged files"
+  test ! -s "$FAKE_WRANGLER_LOG" || fail "retired gateway bootstrap contacted Wrangler"
+done
+if (cd "$retired_gateway_dir" &&
+  make -f "$repo_dir/Makefile" bootstrap-gateway PUBLISH_ARGS=--stage-only) \
+  >"$work_dir/gateway-make-retired.log" 2>&1; then
+  fail "retired make bootstrap-gateway succeeded"
+fi
+grep -q "bootstrap-gateway is retired.*docs/publishing.md" \
+  "$work_dir/gateway-make-retired.log" ||
+  fail "retired make bootstrap-gateway did not explain central setup"
+test ! -s "$FAKE_WRANGLER_LOG" || fail "retired make bootstrap-gateway contacted Wrangler"
 
 # --- Quarto project with output-dir, plus artifact publishing ---------------
 outdir_proj="$work_dir/outdir-proj"

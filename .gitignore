@@ -11,6 +11,10 @@ node_modules/
 *.pyc
 __pycache__/
 .DS_Store
+/gateway/wrangler.jsonc
+**/.wrangler/
+**/.dev.vars*
+**/.env*
 
 
 **/*.quarto_ipynb

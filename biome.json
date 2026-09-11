@@ -8,6 +8,7 @@
       "!!**/*_files",
       "!!_site",
       "!!**/node_modules",
+      "!!gateway/worker-configuration.d.ts",
       "!!output",
       "!!tmp"
     ]

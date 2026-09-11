@@ -5,6 +5,7 @@
 .DS_Store
 docs
 examples
+gateway
 node_modules
 output
 tests
