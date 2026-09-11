@@ -54,6 +54,5 @@ unpublish:
 	quarto run "$(PUBLISH_SCRIPT)" --unpublish $(PUBLISH_ARGS)
 
 bootstrap-gateway:
-	@test -n "$(PUBLISH_SCRIPT)" || { \
-		echo "altmejd-slides extension not found under _extensions/"; exit 1; }
-	quarto run "$(PUBLISH_SCRIPT)" --bootstrap-gateway $(PUBLISH_ARGS)
+	@echo "bootstrap-gateway is retired. Deploy the shared gateway centrally from the altmejd-slides repository; see docs/publishing.md." >&2
+	@exit 1

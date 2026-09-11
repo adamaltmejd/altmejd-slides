@@ -203,6 +203,22 @@ are exercised end-to-end against a mocked wrangler by
 proves a staged deck still works beneath a non-root path prefix. Operational
 details live in `docs/publishing.md`.
 
+`gateway/worker.ts` is the separately managed host gateway. It lists published
+decks at `/` by reading Cloudflare's zone route inventory with a zone-scoped
+read-only token. Only canonical routes for the configured hostname and matching
+Worker names become links. The host, zone ID, title, and discovery Worker
+prefix are configuration, with no personal hostname built into the gateway.
+The gateway uses the Cache API for five-minute freshness and a best-effort
+24-hour retained result on API failures. No deployment registry or updates to
+individual publishers are required. Route discovery establishes membership,
+not deck HTTP health or presentation metadata.
+
+Gateway source and configuration stay in this repository, outside the
+installable extension and starter template. Project-local gateway bootstrapping
+is retired so a vendored extension cannot redeploy shared host infrastructure.
+Older installed copies still need their bootstrap command retired manually.
+Gateway tests use the existing Bun suite with mocked route API and cache effects.
+
 ## Compatibility policy
 
 CI pins the latest stable Quarto release adopted by this repository. The theme

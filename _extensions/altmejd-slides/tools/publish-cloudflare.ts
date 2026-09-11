@@ -13,12 +13,8 @@ import {
   type CloudflareTarget,
   collectAssetRefs,
   collectCssRefs,
-  DEFAULT_HOST,
   deckWorkerScript,
   deckWranglerConfig,
-  deriveZone,
-  gatewayWorkerScript,
-  gatewayWranglerConfig,
   headersFileContent,
   type PublishArtifact,
   planStaging,
@@ -35,7 +31,6 @@ import {
 const STATE_FILE = ".altmejd-slides-publish.json";
 
 interface Options {
-  bootstrapGateway: boolean;
   unpublish: boolean;
   confirm?: string;
   input?: string;
@@ -56,7 +51,7 @@ function usage(): string {
     "",
     "  --input <deck.qmd>    deck source (required when several QMDs exist)",
     "  --slug <slug>         override the public path segment",
-    "  --bootstrap-gateway   deploy the shared gateway Worker for the host",
+    "  --bootstrap-gateway   retired; configure the gateway centrally (docs/publishing.md)",
     "  --unpublish           delete a talk Worker recorded by this project",
     "  --confirm <slug>       confirm that slug when unpublishing non-interactively",
     "  --host <host>         override or supply the publish host",
@@ -72,7 +67,6 @@ function usage(): string {
 
 function parseArgs(args: string[]): Options {
   const opts: Options = {
-    bootstrapGateway: false,
     unpublish: false,
     stageOnly: false,
     keepStaging: false,
@@ -91,8 +85,10 @@ function parseArgs(args: string[]): Options {
     };
     switch (arg) {
       case "--bootstrap-gateway":
-        opts.bootstrapGateway = true;
-        break;
+        return fail(
+          "--bootstrap-gateway is retired. Deploy the shared gateway centrally from " +
+            "the altmejd-slides repository; see docs/publishing.md.",
+        );
       case "--unpublish":
         opts.unpublish = true;
         break;
@@ -137,9 +133,6 @@ function parseArgs(args: string[]): Options {
       default:
         fail(`unknown option ${arg}\n\n${usage()}`);
     }
-  }
-  if (opts.bootstrapGateway && opts.unpublish) {
-    fail("--bootstrap-gateway and --unpublish cannot be used together");
   }
   if (!opts.unpublish && opts.confirm !== undefined) {
     fail("--confirm can only be used with --unpublish");
@@ -893,86 +886,6 @@ async function unpublish(opts: Options): Promise<void> {
   }
 }
 
-async function bootstrapGateway(opts: Options): Promise<void> {
-  let host = opts.host;
-  let zone = opts.zone;
-  if (host === undefined) {
-    const qmds = await listQmdFiles();
-    const input = resolveInput(qmds, opts.input);
-    if (typeof input === "string" && (await exists(input))) {
-      const { cloudflareMeta } = await inspectDeck(input);
-      const target = resolveTarget({
-        metadata: cloudflareMeta,
-        cliSlug: "bootstrap",
-        projectName: "bootstrap",
-      });
-      if ("error" in target) {
-        fail(target.error);
-      }
-      host = target.host;
-      zone = zone ?? target.zone;
-    } else {
-      host = DEFAULT_HOST;
-    }
-  }
-  if (zone === undefined) {
-    const derived = deriveZone(host);
-    if (derived === null) {
-      fail(`cannot derive a zone from "${host}": pass --zone`);
-    }
-    zone = derived;
-  }
-
-  const stagingDir = await Deno.makeTempDir({ prefix: "altmejd-gateway-" });
-  try {
-    await Deno.writeTextFile(`${stagingDir}/worker.js`, gatewayWorkerScript());
-    await Deno.writeTextFile(
-      `${stagingDir}/wrangler.json`,
-      `${JSON.stringify(gatewayWranglerConfig(host, zone), null, 2)}\n`,
-    );
-    if (opts.stageOnly) {
-      console.log(`stage-only: gateway staged in ${stagingDir}, nothing deployed`);
-      opts.keepStaging = true;
-      return;
-    }
-    console.log(`deploying gateway Worker for https://${host}/ (zone ${zone})`);
-    const wrangler = await resolveWrangler();
-    const deploy = await run([...wrangler, "deploy", "--config", `${stagingDir}/wrangler.json`]);
-    if (deploy.code !== 0) {
-      fail(`wrangler deploy failed with exit code ${deploy.code}`);
-    }
-    console.log(`gateway deployed: https://${host}/ now falls back to redirects and 404s`);
-    // The Custom Domain's DNS record can lag behind the deploy; report
-    // readiness separately so a slow resolver is not mistaken for failure.
-    const attempts = envNumber("ALTMEJD_SLIDES_VERIFY_ATTEMPTS", 6);
-    const delayMs = envNumber("ALTMEJD_SLIDES_VERIFY_DELAY_MS", 5000);
-    let reachable = false;
-    for (let attempt = 1; attempt <= attempts && !reachable; attempt++) {
-      try {
-        await fetch(`https://${host}/`, { redirect: "manual" });
-        reachable = true; // any HTTP answer means DNS and the domain resolve
-      } catch {
-        if (attempt < attempts) {
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
-        }
-      }
-    }
-    if (reachable) {
-      console.log(`custom domain answers: https://${host}/ is live`);
-    } else {
-      console.log(
-        `custom domain not reachable yet: the DNS record for ${host} is created ` +
-          "but may take minutes to propagate; publishing works meanwhile and " +
-          "verification can be retried with `make publish`.",
-      );
-    }
-  } finally {
-    if (!opts.keepStaging) {
-      await Deno.remove(stagingDir, { recursive: true }).catch(() => {});
-    }
-  }
-}
-
 async function publish(opts: Options): Promise<void> {
   const qmds = await listQmdFiles();
   const input = resolveInput(qmds, opts.input);
@@ -1030,9 +943,7 @@ async function publish(opts: Options): Promise<void> {
 }
 
 const opts = parseArgs(Deno.args);
-if (opts.bootstrapGateway) {
-  await bootstrapGateway(opts);
-} else if (opts.unpublish) {
+if (opts.unpublish) {
   await unpublish(opts);
 } else {
   await publish(opts);
