@@ -750,6 +750,28 @@ async function deployDeck(opts: Options, target: CloudflareTarget, stagingDir: s
   console.log(`\npublished at: ${publicUrl(target)}`);
 }
 
+async function confirmUnpublish(slug: string, host: string): Promise<boolean> {
+  console.log(`Type "${slug}" to unpublish https://${host}/${slug}/, or press Enter to cancel:`);
+  // prompt() reads synchronously and can fail on inherited nonblocking terminals.
+  // Read one byte at a time so Wrangler can still read its own confirmation.
+  const byte = new Uint8Array(1);
+  let answer = "";
+  let tooLong = false;
+  try {
+    while (true) {
+      const count = await Deno.stdin.read(byte);
+      if (count === null) return false;
+      if (count === 0) continue;
+      if (byte[0] === 10) return !tooLong && answer.replace(/\r$/, "") === slug;
+      // Slugs are ASCII. Allow a final CR, and drain longer answers through Enter.
+      if (answer.length <= slug.length) answer += String.fromCharCode(byte[0]);
+      else tooLong = true;
+    }
+  } catch {
+    fail(`could not read confirmation; nothing was deleted. Retry with --confirm ${slug}`);
+  }
+}
+
 async function unpublish(opts: Options): Promise<void> {
   const incompatible = [
     opts.input !== undefined ? "--input" : undefined,
@@ -814,10 +836,7 @@ async function unpublish(opts: Options): Promise<void> {
           `non-interactive deletion, pass --confirm ${slug}`,
       );
     }
-    const answer = prompt(
-      `Type "${slug}" to unpublish https://${known.host}/${slug}/, or press Enter to cancel:`,
-    );
-    if (answer !== slug) {
+    if (!(await confirmUnpublish(slug, known.host))) {
       fail("confirmation did not match; nothing was deleted");
     }
   }
