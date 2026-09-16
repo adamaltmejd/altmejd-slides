@@ -59,6 +59,11 @@ case "${1:-}" in
     name="${3:?}"
     config="${5:?}"
     cp "$config" "$FAKE_WRANGLER_STATE/delete-config-$name.json"
+    if [ -n "${FAKE_WRANGLER_EXPECT_CONFIRMATION:-}" ]; then
+      IFS= read -r confirmation || exit 65
+      [ "$confirmation" = "$FAKE_WRANGLER_EXPECT_CONFIRMATION" ] || exit 65
+      printf '%s\n' "$confirmation" > "$FAKE_WRANGLER_STATE/delete-confirmation-$name"
+    fi
     if [ -n "${FAKE_WRANGLER_DELETE_FAIL:-}" ]; then
       echo "simulated delete failure" >&2
       exit 1
@@ -555,6 +560,10 @@ grep -q "invalid publish state in .altmejd-slides-publish.json" \
   "$work_dir/unpublish-malformed.log" ||
   fail "malformed publish state lacked an explicit error"
 test ! -s "$FAKE_WRANGLER_LOG" || fail "malformed publish state contacted Wrangler"
+
+# Delayed terminal input must work and leave Wrangler's confirmation unread.
+python3 "$repo_dir/tools/test_unpublish_pty.py" "$publisher" "$work_dir/unpublish-pty" ||
+  fail "interactive unpublish regression checks failed"
 
 # --- unpublish deletes only a recorded Worker and then updates state --------
 # Unpublishing uses the recorded state and must not need a source deck or render.

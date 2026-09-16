@@ -289,12 +289,16 @@ make unpublish
 ```
 
 The publisher selects the sole talk recorded in
-`.altmejd-slides-publish.json`, requires you to type its exact slug, and pins
-Wrangler to the Cloudflare account saved during publishing. Wrangler then asks
-for its own deletion confirmation. Only that recorded Worker and its routes are
-deleted; the publisher verifies that it is gone before removing its state
-entry. It does not render or stage the deck and never touches the shared
-gateway. The gateway then answers 404 for the path.
+`.altmejd-slides-publish.json`, waits for you to type its exact slug and press
+Enter, and pins Wrangler to the Cloudflare account saved during publishing.
+Wrangler then asks for its own deletion confirmation. Only that recorded Worker
+and its routes are deleted; the publisher verifies deletion before removing
+the saved record. It does not render or stage the deck and never touches the
+shared gateway. The gateway then answers 404 for the path.
+
+Pressing Enter without the slug, entering a different value, or closing input
+cancels before contacting Cloudflare. The `unpublish` Makefile target must not
+pass `--input`: deletion uses the saved deployment record, not a source QMD.
 
 If the state file contains several talks, choose one explicitly:
 
